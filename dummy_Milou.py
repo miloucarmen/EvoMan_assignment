@@ -44,7 +44,7 @@ random.seed(1)
 
 tlbx = base.Toolbox()
 tlbx.register("atrr_float", random.random)
-tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n = n_weights)
+tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n = 300)
 tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = Npop)
 
 Pop = tlbx.Population()
@@ -58,5 +58,6 @@ def simulation(env,x):
 # evaluation
 def evaluate(x):
     return np.array(list(map(lambda y: simulation(env,y), x)))
+
 
 f = evaluate(Pop)
