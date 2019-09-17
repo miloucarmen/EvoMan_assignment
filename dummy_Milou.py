@@ -48,16 +48,15 @@ tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_floa
 tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = Npop)
 
 Pop = tlbx.Population()
-ind1 = tlbx.individual
-  
+ 
+
 # runs simulation
 def simulation(env,x):
     f,p,e,t = env.play(pcont=x)
     return f
 
 # evaluation
-def evaluate(individual):
-    return np.array(list(map(lambda y: simulation(env,y), individual)))
+def evaluate(x):
+    return np.array(list(map(lambda y: simulation(env,y), x)))
 
-
-env.play(pcont = ind1)
+f = evaluate(Pop)
