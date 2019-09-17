@@ -18,7 +18,8 @@ if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
 # initializes environment with ai player using random controller, playing against static enemy
-env = Environment(experiment_name=experiment_name)
+env = Environment(experiment_name=experiment_name,
+				  enemies=[2])
 
 # env.state_to_log() # checks environment state
 
@@ -32,23 +33,23 @@ env = Environment(experiment_name=experiment_name)
 
 # run_mode = 'train' # train or test
 
+random.seed(1)
 
 n_hidden = 10
 Npop = 10
-n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
+n_weights = 300 #10*(env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
 
-creator.create("FitnessMax", base.Fitness, weights = (1.0,))
-creator.create("Individual", list, fitness = creator.FitnessMax)
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
 
-random.seed(1)
 
 tlbx = base.Toolbox()
 tlbx.register("atrr_float", random.random)
-tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n = n_weights)
-tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = Npop)
+tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n=n_weights)
+tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n=Npop)
 
-Pop = tlbx.Population()
-ind1 = tlbx.individual
+pop = tlbx.Population()
+ind1 = pop[0]
   
 # runs simulation
 def simulation(env,x):
@@ -56,8 +57,8 @@ def simulation(env,x):
     return f
 
 # evaluation
-def evaluate(individual):
-    return np.array(list(map(lambda y: simulation(env,y), individual)))
+def evaluate(pop):
+    return np.array(list(map(lambda y: simulation(env,y), pop)))
 
-
-env.play(pcont = ind1)
+population_fitness = evaluate(pop)
+print(f)
