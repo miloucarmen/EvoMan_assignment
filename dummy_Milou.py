@@ -25,7 +25,7 @@ env = Environment(experiment_name=experiment_name)
 n_hidden = 10
 n_pop = 6
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
-max_gens = 1
+max_gens = 3
 n_gen = 0
 
 creator.create("FitnessMax", base.Fitness, weights = (1.0,))
@@ -38,7 +38,8 @@ tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = n_pop)
 
 log = tools.Logbook()
 Pop = tlbx.Population()
- 
+best = tlbx.individual()
+
 
 # evaluation
 def EvaluateFit(individual):
@@ -79,6 +80,7 @@ for ind, fit in zip(Pop, fitns):
     ind.fitness.values = fit
 
 fit = [ind.fitness.values[0] for ind in Pop]
+
 
 while max(fit) < 100 and n_gen < max_gens:
 
@@ -124,3 +126,8 @@ while max(fit) < 100 and n_gen < max_gens:
     index = fits.index(maxval)
     log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit = maxval, optweightcombination = Pop[index])
     n_gen += 1
+
+    if best.fitness.valid != True or best.fitness.values <= Pop[index].fitness.values:
+        best = tlbx.clone(Pop[index])
+
+print(best.fitness.values)
