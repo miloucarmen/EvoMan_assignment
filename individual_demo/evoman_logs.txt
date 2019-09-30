@@ -48,6 +48,52 @@ save logs: yes
 
 ########## Simulation state - END ###########
 
-PARAMETER CHANGE: speed = normal
+PARAMETER CHANGE: enemies = [2]
+
+PARAMETER CHANGE: timeexpire = 3000
+
+PARAMETER CHANGE: level = 2
+
+PARAMETER CHANGE: enemyn = 2
+
+PARAMETER CHANGE: overturetime = 100
+
+PARAMETER CHANGE: playermode = ai
+
+PARAMETER CHANGE: enemymode = static
+
+PARAMETER CHANGE: contacthurt = player
+
+PARAMETER CHANGE: clockprec = low
+
+PARAMETER CHANGE: inputscoded = no
+
+PARAMETER CHANGE: randomini = no
+
+PARAMETER CHANGE: multiplemode = no
+
+PARAMETER CHANGE: speed = fastest
+
+PARAMETER CHANGE: loadplayer = yes
+
+PARAMETER CHANGE: loadenemy = yes
+
+PARAMETER CHANGE: sound = on
+
+PARAMETER CHANGE: logs = on
+
+PARAMETER CHANGE: savelogs = yes
+
+MESSAGE: state has been loaded.
+
+RUN: run status: enemy: 2; fitness: -5.796057750765372; player life: 0; enemy life: 100; time: 329
+
+RUN: run status: enemy: 2; fitness: 87.72700044143625; player life: 30; enemy life: 0; time: 195
+
+RUN: run status: enemy: 2; fitness: 3.4666105112724797; player life: 0; enemy life: 90.0; time: 253
+
+RUN: run status: enemy: 2; fitness: 87.72700044143625; player life: 30; enemy life: 0; time: 195
+
+RUN: run status: enemy: 2; fitness: -6.577861357721047; player life: 0; enemy life: 100; time: 719
 
 RUN: run status: enemy: 2; fitness: 90.58272016318507; player life: 56; enemy life: 0; time: 151

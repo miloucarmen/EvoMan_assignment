@@ -177,6 +177,7 @@ if not os.path.exists(experiment_name+'/evoman_solstate'):
     solutions = [pop, fit_pop]
     env.update_solutions(solutions)
 
+
 else:
 
     print( '\nCONTINUING EVOLUTION\n')
@@ -184,7 +185,7 @@ else:
     env.load_state()
     pop = env.solutions[0]
     fit_pop = env.solutions[1]
-
+    print(fit_pop)
     best = np.argmax(fit_pop)
     mean = np.mean(fit_pop)
     std = np.std(fit_pop)
