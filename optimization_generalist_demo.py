@@ -53,7 +53,7 @@ n_vars = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 # multilayer with 1
 dom_u = 1
 dom_l = -1
 npop = 10
-gens = 30
+gens = 5
 mutation = 0.2
 last_best = 0
 
@@ -190,7 +190,7 @@ else:
     env.load_state()
     pop = env.solutions[0]
     fit_pop = env.solutions[1]
-
+    
     best = np.argmax(fit_pop)
     mean = np.mean(fit_pop)
     std = np.std(fit_pop)
@@ -217,7 +217,8 @@ last_sol = fit_pop[best]
 notimproved = 0
 
 for i in range(ini_g+1, gens):
-
+    print("-------------------HERE------------------")
+    print(fit_pop)
     offspring = crossover(pop)  # crossover
     fit_offspring = evaluate(offspring)   # evaluation
     pop = np.vstack((pop,offspring))
@@ -230,6 +231,8 @@ for i in range(ini_g+1, gens):
     # selection
     fit_pop_cp = fit_pop
     fit_pop_norm =  np.array(list(map(lambda y: norm(y,fit_pop_cp), fit_pop))) # avoiding negative probabilities, as fitness is ranges from negative numbers
+    print("WHAT IS Y????????????????????????????????????????/")
+    print(y)
     probs = (fit_pop_norm)/(fit_pop_norm).sum()
     chosen = np.random.choice(pop.shape[0], npop , p=probs, replace=False)
     chosen = np.append(chosen[1:],best)
