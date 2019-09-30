@@ -80,7 +80,7 @@ fit = [ind.fitness.values[0] for ind in Pop]
 while max(fit) < 100 and n_gen < max_gens:
     n_gen += 1
     print("---------------------Generation {}-------------------------".format(n_gen))
-    offspring = tlbx.select(Pop, int(len(Pop)/2)) # Tournament
+    offspring = tlbx.select(Pop, len(Pop)) # Tournament
     offspring = list(map(tlbx.clone, offspring))
     
     for child1, child2 in zip(offspring[::1], offspring[1::2]):
