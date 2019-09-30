@@ -86,14 +86,14 @@ PARAMETER CHANGE: savelogs = yes
 
 MESSAGE: state has been loaded.
 
-RUN: run status: enemy: 2; fitness: 87.7270004414; player life: 30; enemy life: 0; time: 195
+RUN: run status: enemy: 2; fitness: -5.796057750765372; player life: 0; enemy life: 100; time: 329
 
-RUN: run status: enemy: 2; fitness: 29.6955511976; player life: 0; enemy life: 60.0; time: 547
+RUN: run status: enemy: 2; fitness: 87.72700044143625; player life: 30; enemy life: 0; time: 195
 
-RUN: run status: enemy: 2; fitness: 30.2039422492; player life: 0; enemy life: 60.0; time: 329
+RUN: run status: enemy: 2; fitness: 3.4666105112724797; player life: 0; enemy life: 90.0; time: 253
 
-RUN: run status: enemy: 2; fitness: 39.5235364481; player life: 0; enemy life: 50.0; time: 239
+RUN: run status: enemy: 2; fitness: 87.72700044143625; player life: 30; enemy life: 0; time: 195
 
-RUN: run status: enemy: 2; fitness: 89.9235364481; player life: 54; enemy life: 0; time: 239
+RUN: run status: enemy: 2; fitness: -6.577861357721047; player life: 0; enemy life: 100; time: 719
 
-RUN: run status: enemy: 2; fitness: 90.5827201632; player life: 56; enemy life: 0; time: 151
+RUN: run status: enemy: 2; fitness: 90.58272016318507; player life: 56; enemy life: 0; time: 151
