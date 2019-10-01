@@ -24,9 +24,9 @@ if not os.path.exists(experiment_name):
 env = Environment(experiment_name=experiment_name, enemies = [2])
 
 n_hidden = 10
-n_pop = 4
+n_pop = 100
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
-max_gens = 2
+max_gens = 50
 n_gen = 0
 noimprovement = 0
 
@@ -179,7 +179,7 @@ while max(fit) < 100 and n_gen < max_gens:
     else :
         noimprovement = 0
     
-    if noimprovement >= 0:
+    if noimprovement > 15:
         print('~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
         del log[n_gen]
         tlbx.Doomsday(Pop, fits, sigma)
