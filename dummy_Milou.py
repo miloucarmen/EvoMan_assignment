@@ -47,6 +47,7 @@ tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = n_pop)
 
 log = tools.Logbook()
 Pop = tlbx.Population()
+best = tlbx.individual()
 
 
 # evaluation
