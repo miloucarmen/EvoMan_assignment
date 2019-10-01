@@ -24,23 +24,25 @@ if not os.path.exists(experiment_name):
 env = Environment(experiment_name=experiment_name, enemies = [2])
 
 n_hidden = 10
-n_pop = 100
+n_pop = 10
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
 max_gens = 50
 n_gen = 0
 noimprovement = 0
+low_bound = -1
+upper_bound = 1
 
 # sigma for normal dist, tao constant,  pm prop mutation for individu
 sigma = 1
-tao = 1./np.sqrt(n_weights)
-pm = 1./n_pop
+tau = 1/np.sqrt(n_weights)
+mut_prob = 1/n_pop
 
 
 creator.create("FitnessMax", base.Fitness, weights = (1.0,))
 creator.create("Individual", list, fitness = creator.FitnessMax)
 
 tlbx = base.Toolbox()
-tlbx.register("atrr_float", random.random)
+tlbx.register("atrr_float", random.uniform, low_bound, upper_bound)
 tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n = n_weights)
 tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = n_pop)
 
@@ -68,17 +70,23 @@ def Normalise(fit, fitnesses):
     return fitnorm
 
 # changes sigma over time
-def modify_sigma(tao, sigma=sigma):
-    return sigma * np.exp(tao*np.random.normal(0,1))
+def modify_sigma(tau, sigma=sigma):
+    return sigma * np.exp(tau*np.random.normal(0,1))
 
 # mutates alles of gen with p indpb
 def self_adaptive_mutate(individual, sigma, indpb):
+    
     mu = 0
-    print('prob allel:', indpb)
-    print('newsig:',sigma)
     normal_dist = np.random.normal(mu, sigma, len(individual))
     xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0, normal_dist)
-    return individual + xadd
+    individual = individual + xadd
+    for i in range(len(individual)):
+        if individual[i] > upper_bound:
+            individual[i] = upper_bound
+        elif individual[i] < low_bound:
+            individual[i] = low_bound
+
+    return individual
 
 # natural selection of population, without replacement
 def natural_selection(selectionpop, pop_size):
@@ -99,7 +107,7 @@ def Doomsday(pop, fit, sigma):
     orderasc = order[0:worst]
 
     for i in orderasc:
-        self_adaptive_mutate(pop[i], sigma, indpb=(1/n_weights))
+        self_adaptive_mutate(pop[i], sigma, indpb=0.05)
         newfit = tlbx.evaluate(pop[i])
         pop[i].fitness.values = newfit
 
@@ -120,7 +128,7 @@ def uniform_parent(pop): # the pop the portion of total pop you want as chosen i
 
 tlbx.register("evaluate", EvaluateFit)
 tlbx.register("mate", tools.cxUniform, indpb = 0.5)
-tlbx.register("mutate", self_adaptive_mutate, indpb=(1/n_weights))
+tlbx.register("mutate", self_adaptive_mutate, indpb=0.05)
 tlbx.register("select",uniform_parent)
 tlbx.register('survival',natural_selection)
 tlbx.register("Doomsday",Doomsday)
@@ -141,7 +149,7 @@ log.record(gen = n_gen, meanfit = np.mean(fit), varfit = np.var(fit), stdfit = n
 
 while max(fit) < 100 and n_gen < max_gens:
     n_gen += 1
-    print("---------------------Generation %i-------------------------", n_gen)
+    print("---------------------Generation {}-------------------------".format(n_gen + 1))
     offspring = tlbx.select(Pop)
     offspring = list(map(tlbx.clone, offspring))
     
@@ -151,10 +159,10 @@ while max(fit) < 100 and n_gen < max_gens:
             del child1.fitness.values
             del child2.fitness.values
         
-    sigma = modify_sigma(tao, sigma=sigma)
+    sigma = modify_sigma(tau, sigma=sigma)
 
     for mutant in offspring:
-        if random.random() < pm:
+        if random.random() < mut_prob:
             tlbx.mutate(mutant, sigma)
             del mutant.fitness.values
 
