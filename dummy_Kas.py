@@ -15,7 +15,7 @@ if not os.path.exists(experiment_name):
 
 # initializes environment with ai player using random controller, playing 
 # against static enemy
-env = Environment(experiment_name=experiment_name)
+env = Environment(experiment_name=experiment_name, enemies=[2])
 
 n_hidden = 10
 n_pop = 60
@@ -25,8 +25,8 @@ max_gens = 10
 sigma = 1
 tau = 1/np.sqrt(n_weights)
 
-offspring_probability = 0.7
-mutation_probability = 0.1
+offspring_probability = 1
+mutation_probability = 0.2
 
 creator.create("FitnessMax", base.Fitness, weights = (1.0,))
 creator.create("Individual", list, fitness = creator.FitnessMax)
@@ -62,25 +62,24 @@ def crossover(pop):
     print('\n\n\n\n\n\n\n\n Attentione!!!!!!')
     print(Counter([child.fitness.values for child in offspring]))
     for parent_1, parent_2 in zip(offspring[::2], offspring[1::2]):
-        if random.random() < offspring_probability:   
+        if random.random() < mutation_probability:  
+            tlbx.mutate(parent_1, sigma)
+        if random.random() < mutation_probability:  
+            tlbx.mutate(parent_2, sigma)
+        if random.random() < offspring_probability:
             tlbx.mate(parent_1, parent_2)
-    
-    for child in offspring:
-        if random.random() < mutation_probability:      
-            tlbx.mutate(child, sigma)
 
     fitness_population = [tlbx.evaluate(child) for child in offspring]
     for individual, fitness in zip(offspring, fitness_population):
         individual.fitness.values = fitness
 
-
     return offspring
 
 tlbx.register("evaluate", evaluate_individual)
 tlbx.register("mate", tools.cxUniform, indpb=0.1)
-tlbx.register('mutate', self_adaptive_mutate, indpb = 0.05)
-tlbx.register("select",tools.selTournament, tournsize = 2)
-tlbx.register('survival',tools.selTournament, tournsize = 2)
+tlbx.register("mutate", self_adaptive_mutate, indpb = 0.05)
+tlbx.register("select", tools.selTournament, tournsize = 2)
+tlbx.register("survival",tools.selTournament, tournsize = 2)
 
 fitness_population = list(map(tlbx.evaluate, pop))
 
