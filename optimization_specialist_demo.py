@@ -106,9 +106,10 @@ def crossover(pop):
     total_offspring = np.zeros((0,n_vars))
 
 
-    for p in range(0,pop.shape[0], 2):
+    for _ in range(0,pop.shape[0], 2):
         p1 = tournament(pop)
         p2 = tournament(pop)
+        print(p1)
 
         n_offspring =   np.random.randint(1,3+1, 1)[0]
         offspring =  np.zeros( (n_offspring, n_vars) )

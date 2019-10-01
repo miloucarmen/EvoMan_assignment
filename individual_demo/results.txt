@@ -12,3 +12,6 @@ gen best mean std
 
 gen best mean std
 4 90.58272 68.440325 26.306791
+
+gen best mean std
+4 90.58272 68.440325 26.306791
