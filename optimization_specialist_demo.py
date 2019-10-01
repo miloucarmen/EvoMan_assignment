@@ -170,6 +170,7 @@ if not os.path.exists(experiment_name+'/evoman_solstate'):
     print( '\nNEW EVOLUTION\n')
 
     pop = np.random.uniform(dom_l, dom_u, (npop, n_vars))
+    # print(np.shape())
     fit_pop = evaluate(pop)
     best = np.argmax(fit_pop)
     mean = np.mean(fit_pop)
@@ -185,8 +186,8 @@ else:
 
     env.load_state()
     pop = env.solutions[0]
+    print(np.shape(pop))
     fit_pop = env.solutions[1]
-    print(fit_pop)
     best = np.argmax(fit_pop)
     mean = np.mean(fit_pop)
     std = np.std(fit_pop)
@@ -213,7 +214,6 @@ last_sol = fit_pop[best]
 notimproved = 0
 
 for i in range(ini_g+1, gens):
-
     offspring = crossover(pop)  # crossover
     fit_offspring = evaluate(offspring)   # evaluation
     pop = np.vstack((pop,offspring))
@@ -227,7 +227,7 @@ for i in range(ini_g+1, gens):
     fit_pop_cp = fit_pop
     fit_pop_norm =  np.array(list(map(lambda y: norm(y,fit_pop_cp), fit_pop))) # avoiding negative probabilities, as fitness is ranges from negative numbers
     probs = (fit_pop_norm)/(fit_pop_norm).sum()
-    chosen = np.random.choice(pop.shape[0], npop , p=probs, replace=False)
+    chosen = np.random.choice(pop.shape[0], npop , p=probs, replace=True)
     chosen = np.append(chosen[1:],best)
     pop = pop[chosen]
     fit_pop = fit_pop[chosen]
@@ -254,7 +254,7 @@ for i in range(ini_g+1, gens):
     std  =  np.std(fit_pop)
     mean = np.mean(fit_pop)
 
-
+    print("best:, ", pop[best])
     # saves results
     file_aux  = open(experiment_name+'/results.txt','a')
     print( '\n GENERATION '+str(i)+' '+str(round(fit_pop[best],6))+' '+str(round(mean,6))+' '+str(round(std,6)))
