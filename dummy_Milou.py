@@ -35,6 +35,7 @@ sigma = 1
 tao = 1./np.sqrt(n_weights)
 pm = 1./n_pop
 
+
 creator.create("FitnessMax", base.Fitness, weights = (1.0,))
 creator.create("Individual", list, fitness = creator.FitnessMax)
 
@@ -46,7 +47,6 @@ tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = n_pop)
 
 log = tools.Logbook()
 Pop = tlbx.Population()
-best = tlbx.individual()
 
 
 # evaluation
@@ -55,13 +55,13 @@ def EvaluateFit(individual):
     return f,
 
 def Normalise(fit, fitnesses):
-    
+
     if ( max(fitnesses) - min(fitnesses) ) > 0 :
         fitnorm = ( fit - min(fitnesses) )/( max(fitnesses) - min(fitnesses) )
 
     else :
         fitnorm = 0
-    
+
     if fitnorm < 0:
             fitnorm = 0.0000000001
     return fitnorm
@@ -103,7 +103,6 @@ fitns = list(map(tlbx.evaluate, Pop))
 # print(fitnsnorm)
 
 for ind, fit in zip(Pop, fitns):
-    print(fit)
     ind.fitness.values = fit
 
 fit = [ind.fitness.values[0] for ind in Pop]
@@ -111,17 +110,14 @@ maxval = np.max(fit)
 index = fit.index(maxval)
 log.record(gen = n_gen, meanfit = np.mean(fit), varfit = np.var(fit), stdfit = np.std(fit), maxfit = maxval, optweightcombination = Pop[index])
 
-
 while max(fit) < 100 and n_gen < max_gens:
     n_gen += 1
     print("---------------------Generation %i-------------------------", n_gen)
-
-    offspring = tlbx.select(Pop, len(Pop))
+    offspring = tlbx.select(Pop, len(Pop)*3)
     offspring = list(map(tlbx.clone, offspring))
     
     for child1, child2 in zip(offspring[::1], offspring[1::2]):
         if random.random() < OffProb:
-        
             tlbx.mate(child1,child2)
             del child1.fitness.values
             del child2.fitness.values
@@ -140,7 +136,7 @@ while max(fit) < 100 and n_gen < max_gens:
         ind.fitness.values = fit
 
     Pop[:] = tlbx.survival(offspring, len(Pop))
-    
+
     fits = [ind.fitness.values[0] for ind in Pop]
 
     log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), optweightcombination = Pop[fits.index(np.max(fits))])
@@ -173,3 +169,7 @@ pl[0].plot(log.select("gen"), log.select("meanfit"))
 pl[1].plot(log.select("gen"), log.select("stdfit"))
 pl[1].set_xlabel('Generations')
 plt.show()
+
+
+print(log.select("meanfit"))
+print(best.fitness.values)
