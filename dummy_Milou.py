@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 random.seed(1)
 
-experiment_name = 'dummy_demo'
+experiment_name = 'dummy_Milou'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
@@ -26,27 +26,30 @@ env = Environment(experiment_name=experiment_name, enemies = [2])
 n_hidden = 10
 n_pop = 10
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
-max_gens = 2
+max_gens = 50
 n_gen = 0
 noimprovement = 0
+low_bound = -1
+upper_bound = 1
 
 # sigma for normal dist, tao constant,  pm prop mutation for individu
 sigma = 1
-tao = 1./np.sqrt(n_weights)
-pm = 1./n_pop
+tau = 1/np.sqrt(n_weights)
+mut_prob = 1/n_pop
 
 
 creator.create("FitnessMax", base.Fitness, weights = (1.0,))
 creator.create("Individual", list, fitness = creator.FitnessMax)
 
 tlbx = base.Toolbox()
-tlbx.register("atrr_float", random.random)
+tlbx.register("atrr_float", random.uniform, low_bound, upper_bound)
 tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n = n_weights)
 tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = n_pop)
 
 
 log = tools.Logbook()
 Pop = tlbx.Population()
+best = tlbx.individual()
 
 
 # evaluation
@@ -67,40 +70,73 @@ def Normalise(fit, fitnesses):
     return fitnorm
 
 # changes sigma over time
-def modify_sigma(tao, sigma=sigma):
-    return sigma * np.exp(tao*np.random.normal(0,1))
+def modify_sigma(tau, sigma=sigma):
+    return sigma * np.exp(tau*np.random.normal(0,1))
 
 # mutates alles of gen with p indpb
 def self_adaptive_mutate(individual, sigma, indpb):
+    
     mu = 0
-    print('prob allel:', indpb)
-    print('newsig:',sigma)
     normal_dist = np.random.normal(mu, sigma, len(individual))
     xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0, normal_dist)
-    return individual + xadd
+    individual = individual + xadd
+    for i in range(len(individual)):
+        if individual[i] > upper_bound:
+            individual[i] = upper_bound
+        elif individual[i] < low_bound:
+            individual[i] = low_bound
+    return individual
 
-def Doomsday(pop):
+# natural selection of population, without replacement
+def natural_selection(selectionpop, pop_size):
+    fitselect = [ind.fitness.values[0] for ind in selectionpop]
+    pop = []
+    for _ in range(pop_size):
+        idx_inds = random.sample(range(len(fitselect)), 3)
+        fitness_inds = np.array(fitselect)[idx_inds]
+        best_idx = idx_inds[np.argmax(fitness_inds)]
+        pop.append(selectionpop.pop(best_idx))
+        fitselect.pop(best_idx)
     return pop
 
+def Doomsday(pop, fit, sigma):
+    # replaces 25% of population
+    worst = int(n_pop/4)  # a quarter of the population
+    order = np.argsort(fit)
+    orderasc = order[0:worst]
 
-    
-    
+    for i in orderasc:
+        self_adaptive_mutate(pop[i], sigma, indpb=0.05)
+        newfit = tlbx.evaluate(pop[i])
+        pop[i].fitness.values = newfit
+
+    return pop
+
+def uniform_parent(pop): # the pop the portion of total pop you want as chosen individuals
+
+    """the selection for the 'mating population' is created by uniform distribution
+    and is 3 times the size of the orginial population"""
+    chosen_ind = []
+    len_matingpop = 3 * len(pop)
+
+    for ind in range(0, len_matingpop):
+        num = random.randint(0, (len(pop)-1))
+        chosen_ind.append(pop[num])
+
+    return chosen_ind
 
 tlbx.register("evaluate", EvaluateFit)
 tlbx.register("mate", tools.cxUniform, indpb = 0.5)
-tlbx.register("mutate", self_adaptive_mutate, indpb=(1/n_weights))
-tlbx.register("select",tools.selTournament, tournsize = 3)
-tlbx.register('survival',tools.selTournament, tournsize = 3 )
-# tlbx.register("Doomsday",doomsday)
+tlbx.register("mutate", self_adaptive_mutate, indpb=0.05)
+tlbx.register("select",uniform_parent)
+tlbx.register('survival',natural_selection)
+tlbx.register("Doomsday",Doomsday)
 
 OffProb = 0.8
-# tlbx.register("normialise", Normalise)
 
-# evaluate initial pop
 
 fitns = list(map(tlbx.evaluate, Pop))
-# fitnsnorm = list(map(lambda x: tlbx.normialise(x, fitns), fitns))
-# print(fitnsnorm)
+
 
 for ind, fit in zip(Pop, fitns):
     ind.fitness.values = fit
@@ -110,25 +146,37 @@ maxval = np.max(fit)
 index = fit.index(maxval)
 log.record(gen = n_gen, meanfit = np.mean(fit), varfit = np.var(fit), stdfit = np.std(fit), maxfit = maxval, optweightcombination = Pop[index])
 
+file_aux  = open(experiment_name+'/results.txt','a')
+file_aux.write('\n\ngen mean var std max weights')
+print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6)))
+file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6))   )
+file_aux.close()
+
+best = tlbx.clone(Pop[fit.index(np.max(fit))])
+print(best)
+# saves file with the best solution
+np.savetxt(experiment_name+'/best.txt', best)
+
+
 while max(fit) < 100 and n_gen < max_gens:
     n_gen += 1
-    print("---------------------Generation %i-------------------------", n_gen)
-    offspring = tlbx.select(Pop, len(Pop)*3)
+    print("---------------------Generation {}-------------------------".format(n_gen))
+    offspring = tlbx.select(Pop)
     offspring = list(map(tlbx.clone, offspring))
     
-    for child1, child2 in zip(offspring[::1], offspring[1::2]):
+    for child1, child2 in zip(offspring[::2], offspring[1::2]):
         if random.random() < OffProb:
             tlbx.mate(child1,child2)
             del child1.fitness.values
             del child2.fitness.values
         
-    sigma = modify_sigma(tao, sigma=sigma)
+    sigma = modify_sigma(tau, sigma=sigma)
 
     for mutant in offspring:
-        if random.random() < pm:
+        if random.random() < mut_prob:
             tlbx.mutate(mutant, sigma)
             del mutant.fitness.values
-            
+
     new_ind = [ind for ind in offspring if not ind.fitness.valid]    
     fitns = list(map(tlbx.evaluate, new_ind))
 
@@ -140,23 +188,36 @@ while max(fit) < 100 and n_gen < max_gens:
     fits = [ind.fitness.values[0] for ind in Pop]
 
     log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), optweightcombination = Pop[fits.index(np.max(fits))])
-
-
-    if best.fitness.valid != True or best.fitness.values <= Pop[index].fitness.values:
-        best = tlbx.clone(Pop[index])
+    # save result
+    file_aux  = open(experiment_name+'/results.txt','a')
+    print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6)))
+    file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6))   )
+    file_aux.close()
     
+
+    if best.fitness.values <= Pop[fits.index(np.max(fits))].fitness.values:
+        best = tlbx.clone(Pop[fits.index(np.max(fits))])
+        
+        # saves file with the best solution
+        np.savetxt(experiment_name+'/best.txt', best)
+
     if log[n_gen].get("meanfit") <= log[n_gen - 1].get("meanfit") : 
         noimprovement += 1
     else :
         noimprovement = 0
     
-    if noimprovement > 1:
+    if noimprovement > 15:
         print('~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
         del log[n_gen]
-        Doomsday(Pop)
+        tlbx.Doomsday(Pop, fits, sigma)
         fits = [ind.fitness.values[0] for ind in Pop]
         log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), optweightcombination = Pop[fits.index(np.max(fits))])
-
+        
+        # save result
+        file_aux  = open(experiment_name+'/results.txt','a')
+        print( '\n ~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
+        file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6))   )
+        file_aux.close()
 
     
 print(log.select("meanfit"))
@@ -164,7 +225,6 @@ print(best.fitness.values)
 
 fig, pl = plt.subplots(2)
 
-# plot with epidemic
 pl[0].plot(log.select("gen"), log.select("meanfit"))
 pl[1].plot(log.select("gen"), log.select("stdfit"))
 pl[1].set_xlabel('Generations')
