@@ -184,5 +184,5 @@ print("-----------------------------------------------------------------------")
 print("average of generations: ", average_pops)
 print("Best solution: ", best_ind[0])
 
-np.savetxt(experiment_name + "/solution_enemy{}.txt".format(enemy), best_ind[1])
+# np.savetxt(experiment_name + "/solution_enemy{}.txt".format(enemy), best_ind[1])
 np.savetxt(experiment_name + "/average_gens_enemy{}.txt".format(enemy), average_pops)
