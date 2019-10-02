@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 
 
 # set seed, which mode and name experiment
-random.seed(1)
 run_mode = 'train'
 experiment_name = 'offi_Milou'
 enemy = 2 
@@ -130,7 +129,7 @@ tlbx.register('evaluate', EvaluateFit)
 tlbx.register('mate', tools.cxBlend)
 tlbx.register('mutate', self_adaptive_mutate, indpb=0.05)
 tlbx.register('select', uniform_parent)
-tlbx.register('survival', natural_selection)
+tlbx.register('survival', tools.selTournament, tournsize = 3)
 tlbx.register('Doomsday', Doomsday)
 ###################################### End functions ########################################
 
@@ -265,6 +264,7 @@ if run_mode == 'train':
                 tlbx.Doomsday(Pop, fits, sigma)
                 fits = [ind.fitness.values[0] for ind in Pop]
                 lifepoint = [ind.lifepoint for ind in Pop]
+                noimprovement = 0
 
                 # logs results
                 log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), avelifepoint = np.mean(lifepoint))
@@ -303,12 +303,13 @@ lifepoint_average[:] = [x / n_train_simulations for x in lifepoint_average]
 fig, pl = plt.subplots(3)
 
 pl[0].plot(Logs[0].select('gen'), mean_average)
-pl[0].set_ylabel('Average fitness')
+pl[0].set_ylabel('Average fit')
 pl[1].plot(Logs[0].select('gen'), std_average)
-pl[1].set_ylabel('Average standard deviation')
+pl[1].set_ylabel('Average std')
 pl[2].plot(Logs[0].select('gen'), lifepoint_average)
-pl[2].set_ylabel('Average lifepoints')
+pl[2].set_ylabel('Average life')
 pl[2].set_xlabel('Generations')
+fig.savefig('enemy2.png')
 
 
 plt.show()
