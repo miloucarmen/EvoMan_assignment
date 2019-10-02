@@ -4,6 +4,7 @@
 
 # imports framework
 import sys
+import os
 sys.path.insert(0, 'evoman')
 from environment import Environment
 from demo_controller import player_controller
@@ -17,7 +18,7 @@ experiment_name = 'dummy_bart'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
-random.seed(1)
+# random.seed(1)
 
 # enemy(ies) to play against
 enemy = 2
@@ -28,14 +29,15 @@ env = Environment(experiment_name=experiment_name,
                   playermode="ai",
                   player_controller=player_controller(),
                   enemymode="static",
-                  speed="fastest")
+                  speed="fastest",
+                  logs="off")
 
 run_mode = 'train'
 
 # standard variables
 n_hidden = 10
-pop_size = 50
-n_gens = 30
+pop_size = 4
+n_gens = 2
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5
 upper_w = 1
 lower_w = -1
@@ -49,6 +51,7 @@ average_pops = []
 std_pops = []
 best_per_gen = []
 best_overall = 0
+noimprove = 0
 
 
 log = tools.Logbook()
@@ -72,7 +75,7 @@ def register_deap_functions():
 
     tlbx.register("mutate", self_adaptive_mutate, indpb=0.05)
 
-    tlbx.register("select",tools.selTournament, tournsize = 3)
+    tlbx.register("select", uniform_parent)
     tlbx.register('survival', natural_selection)
 
 # evaluate individual
@@ -115,7 +118,7 @@ def uniform_parent(pop): # the pop the portion of total pop you want as chosen i
     """the selection for the 'mating population' is created by uniform distribution
     and is 3 times the size of the orginial population"""
     chosen_ind = []
-    len_matingpop = 3 * len(pop)
+    len_matingpop = len(pop)
 
     for ind in range(0, len_matingpop):
         num = random.randint(0, (len(pop)-1))
@@ -132,59 +135,33 @@ def check_bounds(ind, lower_w, upper_w):
             ind[i] = lower_w
     return ind
 
+# replace worst half of pop by mutating every allele in genome
+def doomsday(pop, pop_fit, sigma):
+    worst = len(pop)//2
+    order = np.argsort(pop_fit)
+    orderasc = order[0:worst]
+
+    for idx in orderasc:
+        tlbx.mutate(pop[idx], sigma, indpb=1)
+        new_fit = tlbx.evaluate(pop[idx])
+        pop[idx].fitness.values = new_fit
+
+    pop_fit = [ind.fitness.values[0] for ind in pop]
+    return pop, pop_fit
+
 # register deap functions
 register_deap_functions()
 
-# initializes population at random
-pop = tlbx.population()
-pop_fit = [tlbx.evaluate(individual) for individual in pop]
+for n_sim in range(10):
+    print("-------------------------Simulation {}----------------------------------------------".format(n_sim+1))
+    # initializes population at random
+    pop = tlbx.population()
+    pop_fit = [tlbx.evaluate(ind) for ind in pop]
 
-best = np.argmax(pop_fit)
-std = np.std(pop_fit)
-mean = np.mean(pop_fit)
-
-average_pops.append(mean)
-std_pops.append(std)
-best_per_gen.append(pop_fit[best])
-
-for ind, fit in zip(pop, pop_fit):
-    ind.fitness.values = fit
-
-for n_gen in range(n_gens):
-    print("---------------------Generation {}-------------------------".format(n_gen + 1))
-
-    offspring = tlbx.select(pop, pop_size)
-    offspring = list(map(tlbx.clone, offspring))
-    new_pop = []
-
-    sigma = modify_sigma(tau, sigma=sigma)
-
-    for parent1, parent2 in zip(offspring[::2], offspring[1::2]):
-        if random.random() < mate_prob:
-            for i in range(4):
-                child1, child2 = tlbx.blend_crossover(parent1,parent2)
-                new_pop.append(child1), new_pop.append(child2)
-        else:
-            new_pop.append(parent1), new_pop.append(parent2)
-
-    for mutant in new_pop:
-        if random.random() < mut_prob:
-
-            tlbx.mutate(mutant, sigma)
-
-    print('Length of all offspring: ', len(new_pop))
-    new_pop = [check_bounds(ind, lower_w, upper_w) for ind in new_pop]
-    new_pop_fitness = [tlbx.evaluate(ind) for ind in new_pop]
-
-    for ind, fit in zip(new_pop, new_pop_fitness):
+    for ind, fit in zip(pop, pop_fit):
         ind.fitness.values = fit
 
-    pop[:] = tlbx.survival(new_pop, pop_size)
-
-    pop_fit = np.array([ind.fitness.values for ind in pop])
-
-    print("new population fitness:, ", pop_fit)
-
+    pop_fit = [ind.fitness.values[0] for ind in pop]
     best = np.argmax(pop_fit)
     std = np.std(pop_fit)
     mean = np.mean(pop_fit)
@@ -193,14 +170,75 @@ for n_gen in range(n_gens):
     std_pops.append(std)
     best_per_gen.append(pop_fit[best])
 
-    if pop_fit[best] > best_overall:
-        np.savetxt(experiment_name + '/best_solution_enemy{}.txt'.format(enemy), pop[best])
+    file_aux  = open(experiment_name+'/sim {}_results_enemy{}.txt'.format(n_sim+1, enemy),'a')
+    print( '\n GENERATION '+str(0)+' Ave: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)))
+
+    file_aux.write('GEN ' + 'Mean' + 'Std ' + 'Best')
+    file_aux.write(str(0)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6))+'\n')
+    file_aux.close()
+
+    for n_gen in range(n_gens):
+        print("---------------------Generation {}-------------------------".format(n_gen + 1))
+
+        offspring = tlbx.select(pop)
+        offspring = list(map(tlbx.clone, offspring))
+        new_pop = []
+
+        sigma = modify_sigma(tau, sigma=sigma)
+
+        for parent1, parent2 in zip(offspring[::2], offspring[1::2]):
+            if random.random() < mate_prob:
+                for i in range(4):
+                    child1, child2 = tlbx.blend_crossover(parent1,parent2)
+                    new_pop.append(child1), new_pop.append(child2)
+            else:
+                new_pop.append(parent1), new_pop.append(parent2)
+
+        for mutant in new_pop:
+            if random.random() < mut_prob:
+                tlbx.mutate(mutant, sigma)
+
+        print('Length of all offspring: ', len(new_pop))
+        new_pop = [check_bounds(ind, lower_w, upper_w) for ind in new_pop]
+        new_pop_fitness = [tlbx.evaluate(ind) for ind in new_pop]
+
+        for ind, fit in zip(new_pop, new_pop_fitness):
+            ind.fitness.values = fit
+
+        pop[:] = tlbx.survival(new_pop, pop_size)
+        pop_fit = [ind.fitness.values[0] for ind in pop]
+
+        best = np.argmax(pop_fit)
+        std = np.std(pop_fit)
+        mean = np.mean(pop_fit)
+
+        average_pops.append(mean)
+        std_pops.append(std)
+        best_per_gen.append(pop_fit[best])
 
 
+        if pop_fit[best] > best_overall:
+            np.savetxt(experiment_name + '/sim {}_best_solution_enemy{}.txt'.format(n_sim+1, enemy), pop[best])
+            noimprove = 0
+        else:
+            noimprove += 1
 
-print("-----------------------------------------------------------------------")
-print("average of generations: ", average_pops)
+        if noimprove > n_gens//4:
+            print("doom")
+            pop, pop_fit = doomsday(pop, pop_fit, sigma)
+            noimprove = 0
 
-np.savetxt(experiment_name + "/average_gen_enemy{}.txt".format(enemy), average_pops)
-np.savetxt(experiment_name + "/std_gen_enemy{}.txt".format(enemy), std_pops)
-np.savetxt(experiment_name + "/best_of_gen_enemy{}.txt".format(enemy), best_per_gen)
+        print(pop_fit)
+
+
+        # save result
+        file_aux  = open(experiment_name+'/sim {}_results_enemy{}.txt'.format(n_sim+1, enemy),'a')
+        print( '\n GENERATION '+str(n_gen+1)+' Ave: '+str(round(mean,6))+' Std: '+str(round(std,6))+' Best: '+str(round(pop_fit[best],6)))
+        file_aux.write('\n'+ str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)))
+        file_aux.close()
+
+    print("average of generations: ", average_pops)
+
+    np.savetxt(experiment_name + "/sim {}_average_gen_enemy{}.txt".format(n_sim+1,enemy), average_pops)
+    np.savetxt(experiment_name + "/sim_ {}_std_gen_enemy{}.txt".format(n_sim+1, enemy), std_pops)
+    np.savetxt(experiment_name + "/sim_ {}_best_of_gen_enemy{}.txt".format(n_sim+1, enemy), best_per_gen)

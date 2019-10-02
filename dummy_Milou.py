@@ -34,7 +34,7 @@ env = Environment(experiment_name=experiment_name,
 #global vars
 n_hidden = 10
 n_pop = 10
-n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
+n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5
 max_gens = 50
 n_gen = 0
 noimprovement = 0
@@ -65,7 +65,6 @@ log = tools.Logbook()
 Pop = tlbx.Population()
 best = tlbx.individual()
 
-
 # evaluation
 def EvaluateFit(individual):
     f,p,e,t = env.play(pcont=individual)
@@ -77,7 +76,7 @@ def modify_sigma(tau, sigma=sigma):
 
 # mutates alles of gen with p indpb
 def self_adaptive_mutate(individual, sigma, indpb):
-    
+
     mu = 0
     normal_dist = np.random.normal(mu, sigma, len(individual))
     xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0, normal_dist)
@@ -108,6 +107,7 @@ def Doomsday(pop, fit, sigma):
     orderasc = order[0:worst]
 
     for i in orderasc:
+        print(i)
         self_adaptive_mutate(pop[i], sigma, indpb=1)
         newfit = tlbx.evaluate(pop[i])
         pop[i].fitness.values = newfit
@@ -180,13 +180,13 @@ while max(fit) < 100 and n_gen < max_gens:
     print("---------------------Generation {}-------------------------".format(n_gen))
     offspring = tlbx.select(Pop)
     offspring = list(map(tlbx.clone, offspring))
-    
+
     for child1, child2 in zip(offspring[::2], offspring[1::2]):
         if random.random() < OffProb:
             tlbx.mate(child1,child2, random.random())
             del child1.fitness.values
             del child2.fitness.values
-        
+
     sigma = modify_sigma(tau, sigma=sigma)
 
     for mutant in offspring:
@@ -194,7 +194,7 @@ while max(fit) < 100 and n_gen < max_gens:
             tlbx.mutate(mutant, sigma)
             del mutant.fitness.values
 
-    new_ind = [ind for ind in offspring if not ind.fitness.valid]    
+    new_ind = [ind for ind in offspring if not ind.fitness.valid]
     fitns = list(map(tlbx.evaluate, new_ind))
 
     for ind, fit in zip(new_ind, fitns):
@@ -213,36 +213,36 @@ while max(fit) < 100 and n_gen < max_gens:
     print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6)))
     file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6))   )
     file_aux.close()
-    
+
 
     if best.fitness.values < log[n_gen].get("maxfit"):
-        
+
         index = fit.index(np.max(fit))
         ind = Pop[index]
         best = tlbx.clone(ind)
-        
+
         # saves file with the best solution
         np.savetxt(experiment_name+'/best.txt', best)
 
-    if log[n_gen].get("meanfit") <= log[n_gen - 1].get("meanfit") : 
+    if log[n_gen].get("meanfit") <= log[n_gen - 1].get("meanfit"):
         noimprovement += 1
-    else :
+    else:
         noimprovement = 0
-    
+
     if noimprovement > 3:
         print('~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
         del log[n_gen]
         tlbx.Doomsday(Pop, fits, sigma)
         fits = [ind.fitness.values[0] for ind in Pop]
         log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), optweightcombination = Pop[fits.index(np.max(fits))])
-        
+
         # save result
         file_aux  = open(experiment_name+'/results.txt','a')
         print( '\n ~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
         file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6))   )
         file_aux.close()
 
-    
+
 print(log.select("meanfit"))
 print(best.fitness.values)
 
