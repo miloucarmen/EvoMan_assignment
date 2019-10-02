@@ -32,15 +32,15 @@ env = Environment(experiment_name=experiment_name,
                   playermode="ai",
                   player_controller=player_controller(),
                   enemymode="static",
-                  speed="fastest")
-                  # logs="off")
+                  speed="fastest",
+                  logs="off")
 
 run_mode = 'train'
 
 # standard variables
 n_hidden = 10
-pop_size = 3
-n_gens = 2
+pop_size = 50
+n_gens = 20
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5
 upper_w = 1
 lower_w = -1
@@ -152,7 +152,7 @@ def doomsday(pop, pop_fit, sigma):
         new_fit = tlbx.evaluate(pop[idx])
         pop[idx].fitness.values = new_fit
 
-    # pop_fit = [ind.fitness.values[0] for ind in pop]
+    pop_fit = [ind.fitness.values[0] for ind in pop]
     return pop
 
 # register deap functions
@@ -183,7 +183,7 @@ for n_sim in range(10):
     std_pops.append(std)
     best_per_gen.append(pop_fit[best])
 
-    file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'w')
+    file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'a')
     print( '\n GENERATION '+str(0)+ ' Ave fit: '+str(round(mean,6))+ ' Std:  '+str(round(std,6))+ ' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
 
     file_aux.write('GEN ' + 'Mean fit ' + 'Std ' + 'Best ' + 'Ave life' + '\n')
@@ -233,6 +233,15 @@ for n_sim in range(10):
         std_pops.append(std)
         best_per_gen.append(pop_fit[best])
 
+        print("Pop:", pop_fit)
+
+
+
+        # save result
+        file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'a')
+        print( '\n GENERATION '+str(n_gen + 1)+' Ave fit: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
+        file_aux.write(str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) +' ' + str(round(mean_life, 6)) +'\n')
+        file_aux.close()
 
         if pop_fit[best] > best_overall:
             np.savetxt(experiment_name + '/enemy {}/sim {}/best_solution.txt'.format(enemy, n_sim+1), pop[best])
@@ -245,12 +254,6 @@ for n_sim in range(10):
             pop = doomsday(pop, pop_fit, sigma)
             noimprove = 0
 
-        # save result
-        file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'w')
-        print( '\n GENERATION '+str(n_gen + 1)+' Ave fit: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
-        file_aux.write(str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) +' ' + str(round(mean_life, 6)) +'\n')
-        file_aux.close()
-
     print("average of generations: ", average_pops)
 
     np.savetxt(experiment_name + "/enemy {}/sim {}/mean_gen.txt".format(enemy, n_sim+1), average_pops)
@@ -262,3 +265,5 @@ for n_sim in range(10):
     std_pops = []
     best_per_gen = []
     player_means = []
+    best_overall = 0
+    noimprove = 0
