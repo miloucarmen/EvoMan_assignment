@@ -18,19 +18,22 @@ experiment_name = 'dummy_bart'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
+
 # random.seed(1)
 
 # enemy(ies) to play against
-enemy = 2
+enemy = 1
 
+if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
+    os.makedirs(experiment_name + '/enemy {}'.format(enemy))
 # initializes environment with ai player using random controller, playing against static enemy
 env = Environment(experiment_name=experiment_name,
                   enemies=[enemy],
                   playermode="ai",
                   player_controller=player_controller(),
                   enemymode="static",
-                  speed="fastest",
-                  logs="off")
+                  speed="fastest")
+                  # logs="off")
 
 run_mode = 'train'
 
@@ -50,9 +53,9 @@ mate_prob = 0.8
 average_pops = []
 std_pops = []
 best_per_gen = []
+player_means = []
 best_overall = 0
 noimprove = 0
-
 
 log = tools.Logbook()
 tlbx = base.Toolbox()
@@ -61,7 +64,7 @@ env.state_to_log() # checks environment state
 # register and create deap functions and classes
 def register_deap_functions():
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
+    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax, lifepoints=1)
 
     tlbx.register("atrr_float", np.random.uniform, low=lower_w, high=upper_w)
     tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n=n_weights)
@@ -79,8 +82,9 @@ def register_deap_functions():
     tlbx.register('survival', natural_selection)
 
 # evaluate individual
-def evaluate(x):
-    f,p,e,t = env.play(pcont=x)
+def evaluate(individual):
+    f,p,e,t = env.play(pcont=individual)
+    individual.lifepoints = p
     return f,
 
 # changes sigma over time
@@ -146,13 +150,16 @@ def doomsday(pop, pop_fit, sigma):
         new_fit = tlbx.evaluate(pop[idx])
         pop[idx].fitness.values = new_fit
 
-    pop_fit = [ind.fitness.values[0] for ind in pop]
-    return pop, pop_fit
+    # pop_fit = [ind.fitness.values[0] for ind in pop]
+    return pop
 
 # register deap functions
 register_deap_functions()
 
 for n_sim in range(10):
+
+    if not os.path.exists(experiment_name+'/enemy {}/sim {}'.format(enemy, n_sim+1)):
+        os.makedirs(experiment_name+'/enemy {}/sim {}'.format(enemy, n_sim+1))
     print("-------------------------Simulation {}----------------------------------------------".format(n_sim+1))
     # initializes population at random
     pop = tlbx.population()
@@ -162,19 +169,23 @@ for n_sim in range(10):
         ind.fitness.values = fit
 
     pop_fit = [ind.fitness.values[0] for ind in pop]
+    player_life = [ind.lifepoints for ind in pop]
+
     best = np.argmax(pop_fit)
     std = np.std(pop_fit)
     mean = np.mean(pop_fit)
+    mean_life = np.mean(player_life)
 
+    player_means.append(mean_life)
     average_pops.append(mean)
     std_pops.append(std)
     best_per_gen.append(pop_fit[best])
 
-    file_aux  = open(experiment_name+'/sim {}_results_enemy{}.txt'.format(n_sim+1, enemy),'a')
-    print( '\n GENERATION '+str(0)+' Ave: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)))
+    file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(n_sim+1, enemy),'a')
+    print( '\n GENERATION '+str(0)+ ' Ave fit: '+str(round(mean,6))+ ' Std:  '+str(round(std,6))+ ' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
 
-    file_aux.write('GEN ' + 'Mean' + 'Std ' + 'Best')
-    file_aux.write(str(0)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6))+'\n')
+    file_aux.write('GEN ' + 'Mean fit ' + 'Std ' + 'Best ' + 'Ave life' + '\n')
+    file_aux.write(str(0)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) + ' ' + str(round(mean_life, 6)) +'\n')
     file_aux.close()
 
     for n_gen in range(n_gens):
@@ -207,38 +218,40 @@ for n_sim in range(10):
 
         pop[:] = tlbx.survival(new_pop, pop_size)
         pop_fit = [ind.fitness.values[0] for ind in pop]
+        player_life = [ind.lifepoints for ind in pop]
+
 
         best = np.argmax(pop_fit)
         std = np.std(pop_fit)
         mean = np.mean(pop_fit)
+        mean_life = np.mean(player_life)
 
+        player_means.append(mean_life)
         average_pops.append(mean)
         std_pops.append(std)
         best_per_gen.append(pop_fit[best])
 
 
         if pop_fit[best] > best_overall:
-            np.savetxt(experiment_name + '/sim {}_best_solution_enemy{}.txt'.format(n_sim+1, enemy), pop[best])
+            np.savetxt(experiment_name + '/enemy {}/sim {}/best_solution.txt'.format(n_sim+1, enemy), pop[best])
             noimprove = 0
         else:
             noimprove += 1
 
         if noimprove > n_gens//4:
             print("doom")
-            pop, pop_fit = doomsday(pop, pop_fit, sigma)
+            pop = doomsday(pop, pop_fit, sigma)
             noimprove = 0
 
-        print(pop_fit)
-
-
         # save result
-        file_aux  = open(experiment_name+'/sim {}_results_enemy{}.txt'.format(n_sim+1, enemy),'a')
-        print( '\n GENERATION '+str(n_gen+1)+' Ave: '+str(round(mean,6))+' Std: '+str(round(std,6))+' Best: '+str(round(pop_fit[best],6)))
-        file_aux.write('\n'+ str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)))
+        file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1),'a')
+        print( '\n GENERATION '+str(n_gen + 1)+' Ave fit: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
+        file_aux.write(str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) +' ' + str(round(mean_life, 6)) +'\n')
         file_aux.close()
 
     print("average of generations: ", average_pops)
 
-    np.savetxt(experiment_name + "/sim {}_average_gen_enemy{}.txt".format(n_sim+1,enemy), average_pops)
-    np.savetxt(experiment_name + "/sim_ {}_std_gen_enemy{}.txt".format(n_sim+1, enemy), std_pops)
-    np.savetxt(experiment_name + "/sim_ {}_best_of_gen_enemy{}.txt".format(n_sim+1, enemy), best_per_gen)
+    np.savetxt(experiment_name + "/enemy {}/sim {}/mean_gen.txt".format(enemy, n_sim+1), average_pops)
+    np.savetxt(experiment_name + "/enemy {}/sim {}/std_gen.txt".format(enemy, n_sim+1), std_pops)
+    np.savetxt(experiment_name + "/enemy {}/sim {}/best_per_gen.txt".format(enemy, n_sim+1), best_per_gen)
+    np.savetxt(experiment_name + "/enemy {}/sim {}/mean_life.txt".format(enemy, n_sim+1), player_means)
