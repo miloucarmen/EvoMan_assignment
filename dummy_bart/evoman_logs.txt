@@ -48,6 +48,7 @@ save logs: yes
 
 ########## Simulation state - END ###########
 
+<<<<<<< HEAD
 RUN: run status: enemy: 2; fitness: -5.796057750765372; player life: 0; enemy life: 100; time: 329
 
 RUN: run status: enemy: 2; fitness: -5.3471075307174685; player life: 0; enemy life: 100; time: 210
@@ -85,9 +86,13 @@ RUN: run status: enemy: 2; fitness: -5.796057750765372; player life: 0; enemy li
 RUN: run status: enemy: 2; fitness: -5.796057750765372; player life: 0; enemy life: 100; time: 329
 
 RUN: run status: enemy: 2; fitness: 30.20394224923463; player life: 0; enemy life: 60.0; time: 329
+=======
+RUN: run status: enemy: 2; fitness: 21.210039829102747; player life: 0; enemy life: 70.0; time: 327
+>>>>>>> 7e6a10cd2d45fe1d729568c60d4dcbb4114c107d
 
 RUN: run status: enemy: 2; fitness: -5.313205979041787; player life: 0; enemy life: 100; time: 203
 
+<<<<<<< HEAD
 RUN: run status: enemy: 2; fitness: -5.7745515455444085; player life: 0; enemy life: 100; time: 322
 
 RUN: run status: enemy: 2; fitness: -5.777652323222656; player life: 0; enemy life: 100; time: 323
@@ -301,9 +306,15 @@ RUN: run status: enemy: 2; fitness: 85.62385026742616; player life: 8; enemy lif
 RUN: run status: enemy: 2; fitness: 30.519361076658008; player life: 0; enemy life: 60.0; time: 240
 
 RUN: run status: enemy: 2; fitness: -5.796057750765372; player life: 0; enemy life: 100; time: 329
+=======
+RUN: run status: enemy: 2; fitness: 30.22544845445559; player life: 0; enemy life: 60.0; time: 322
+
+RUN: run status: enemy: 2; fitness: 21.24109822612272; player life: 0; enemy life: 70.0; time: 317
+>>>>>>> 7e6a10cd2d45fe1d729568c60d4dcbb4114c107d
 
 RUN: run status: enemy: 2; fitness: -5.783825182329737; player life: 0; enemy life: 100; time: 325
 
+<<<<<<< HEAD
 RUN: run status: enemy: 2; fitness: -5.777652323222656; player life: 0; enemy life: 100; time: 323
 
 RUN: run status: enemy: 2; fitness: -5.831882477283517; player life: 0; enemy life: 100; time: 341
@@ -5477,3 +5488,10 @@ RUN: run status: enemy: 2; fitness: 91.77237888630937; player life: 74; enemy li
 RUN: run status: enemy: 2; fitness: 48.168117522716486; player life: 0; enemy life: 40.0; time: 341
 
 RUN: run status: enemy: 2; fitness: 91.27603602059675; player life: 64; enemy life: 0; time: 168
+=======
+RUN: run status: enemy: 2; fitness: 12.213102618633293; player life: 0; enemy life: 80.0; time: 326
+
+RUN: run status: enemy: 2; fitness: 3.2009073455394743; player life: 0; enemy life: 90.0; time: 330
+
+RUN: run status: enemy: 2; fitness: 3.2348088972151556; player life: 0; enemy life: 90.0; time: 319
+>>>>>>> 7e6a10cd2d45fe1d729568c60d4dcbb4114c107d
