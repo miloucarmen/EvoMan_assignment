@@ -18,16 +18,24 @@ if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
 random.seed(1)
+
+# enemy(ies) to play against
 enemy = 2
 
 # initializes environment with ai player using random controller, playing against static enemy
 env = Environment(experiment_name=experiment_name,
-				  enemies=[enemy])
+                  enemies=[enemy],
+                  playermode="ai",
+                  player_controller=player_controller(),
+                  enemymode="static",
+                  speed="fastest")
+
+run_mode = 'train'
 
 # standard variables
 n_hidden = 10
-pop_size = 5
-n_gens = 2
+pop_size = 50
+n_gens = 30
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5
 upper_w = 1
 lower_w = -1
@@ -38,12 +46,16 @@ tau = 1/np.sqrt(n_weights)
 mut_prob = 1/pop_size
 mate_prob = 0.8
 average_pops = []
-best_ind = [0, []]
+std_pops = []
+best_per_gen = []
+best_overall = 0
+
 
 log = tools.Logbook()
 tlbx = base.Toolbox()
 env.state_to_log() # checks environment state
 
+# register and create deap functions and classes
 def register_deap_functions():
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
@@ -90,18 +102,12 @@ def natural_selection(selectionpop, pop_size):
         fitselect.pop(best_idx)
     return pop
 
-def karina_crossover(parent1, parent2):
-    cross_prop = np.random.uniform(0,1)
-    child1 = parent1*cross_prop + parent2*(1-cross_prop)
-    child2 = parent1*(1-cross_prop) + parent2*cross_prop
-
-    return creator.Individual(child1), creator.Individual(child2)
-
+# blend crossover function, returns two children
 def blend_crossover(parent1, parent2, alpha=0.5):
-    d =abs(parent1 - parent2)
+    d = abs(parent1 - parent2)
 
-    child1 = creator.Individual(np.random.uniform(parent1-alpha*d, parent1+alpha*d))
-    child2 = creator.Individual(np.random.uniform(parent2-alpha*d, parent2+alpha*d))
+    child1 = creator.Individual(np.random.uniform(np.minimum(parent1, parent2)-alpha*d, np.maximum(parent1, parent2)+alpha*d))
+    child2 = creator.Individual(np.random.uniform(np.minimum(parent1, parent2)-alpha*d, np.maximum(parent1, parent2)+alpha*d))
     return child1, child2
 
 def uniform_parent(pop): # the pop the portion of total pop you want as chosen individuals
@@ -117,6 +123,7 @@ def uniform_parent(pop): # the pop the portion of total pop you want as chosen i
 
     return chosen_ind
 
+# checks the an individual for its values, if over boundary
 def check_bounds(ind, lower_w, upper_w):
     for i in range(len(ind)):
         if ind[i] > upper_w:
@@ -125,15 +132,22 @@ def check_bounds(ind, lower_w, upper_w):
             ind[i] = lower_w
     return ind
 
+# register deap functions
 register_deap_functions()
 
+# initializes population at random
 pop = tlbx.population()
-fitns = [tlbx.evaluate(individual) for individual in pop]
+pop_fit = [tlbx.evaluate(individual) for individual in pop]
 
-average_pops.append(np.array(fitns).mean())
+best = np.argmax(pop_fit)
+std = np.std(pop_fit)
+mean = np.mean(pop_fit)
 
+average_pops.append(mean)
+std_pops.append(std)
+best_per_gen.append(pop_fit[best])
 
-for ind, fit in zip(pop, fitns):
+for ind, fit in zip(pop, pop_fit):
     ind.fitness.values = fit
 
 for n_gen in range(n_gens):
@@ -143,24 +157,22 @@ for n_gen in range(n_gens):
     offspring = list(map(tlbx.clone, offspring))
     new_pop = []
 
-
     sigma = modify_sigma(tau, sigma=sigma)
 
     for parent1, parent2 in zip(offspring[::2], offspring[1::2]):
         if random.random() < mate_prob:
             for i in range(4):
-                child1, child2 = karina_crossover(parent1,parent2)
+                child1, child2 = tlbx.blend_crossover(parent1,parent2)
                 new_pop.append(child1), new_pop.append(child2)
         else:
             new_pop.append(parent1), new_pop.append(parent2)
-
-    print("new_popsize: ", len(new_pop))
 
     for mutant in new_pop:
         if random.random() < mut_prob:
 
             tlbx.mutate(mutant, sigma)
 
+    print('Length of all offspring: ', len(new_pop))
     new_pop = [check_bounds(ind, lower_w, upper_w) for ind in new_pop]
     new_pop_fitness = [tlbx.evaluate(ind) for ind in new_pop]
 
@@ -169,20 +181,26 @@ for n_gen in range(n_gens):
 
     pop[:] = tlbx.survival(new_pop, pop_size)
 
-    fits = np.array([ind.fitness.values for ind in pop])
-    print("Fitnesses current population:", fits)
-    best_curr_pop = pop[np.argmax(fits)]
-    average_pop = fits.mean()
+    pop_fit = np.array([ind.fitness.values for ind in pop])
 
-    average_pops.append(average_pop)
+    print("new population fitness:, ", pop_fit)
 
-    if best_curr_pop.fitness.values[0] > best_ind[0]:
-        best_ind[0] = best_curr_pop.fitness.values[0]
-        best_ind[1] = best_curr_pop
+    best = np.argmax(pop_fit)
+    std = np.std(pop_fit)
+    mean = np.mean(pop_fit)
+
+    average_pops.append(mean)
+    std_pops.append(std)
+    best_per_gen.append(pop_fit[best])
+
+    if pop_fit[best] > best_overall:
+        np.savetxt(experiment_name + '/best_solution_enemy{}.txt'.format(enemy), pop[best])
+
+
 
 print("-----------------------------------------------------------------------")
 print("average of generations: ", average_pops)
-print("Best solution: ", best_ind[0])
 
-# np.savetxt(experiment_name + "/solution_enemy{}.txt".format(enemy), best_ind[1])
-np.savetxt(experiment_name + "/average_gens_enemy{}.txt".format(enemy), average_pops)
+np.savetxt(experiment_name + "/average_gen_enemy{}.txt".format(enemy), average_pops)
+np.savetxt(experiment_name + "/std_gen_enemy{}.txt".format(enemy), std_pops)
+np.savetxt(experiment_name + "/best_of_gen_enemy{}.txt".format(enemy), best_per_gen)

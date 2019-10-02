@@ -109,7 +109,7 @@ def crossover(pop):
     for _ in range(0,pop.shape[0], 2):
         p1 = tournament(pop)
         p2 = tournament(pop)
-        print(p1)
+        # print(p1)
 
         n_offspring =   np.random.randint(1,3+1, 1)[0]
         offspring =  np.zeros( (n_offspring, n_vars) )
@@ -168,9 +168,9 @@ if run_mode =='test':
 if not os.path.exists(experiment_name+'/evoman_solstate'):
 
     print( '\nNEW EVOLUTION\n')
-
+    print("initializes")
     pop = np.random.uniform(dom_l, dom_u, (npop, n_vars))
-    # print(np.shape())
+    print(np.shape(pop))
     fit_pop = evaluate(pop)
     best = np.argmax(fit_pop)
     mean = np.mean(fit_pop)
@@ -254,7 +254,7 @@ for i in range(ini_g+1, gens):
     std  =  np.std(fit_pop)
     mean = np.mean(fit_pop)
 
-    print("best:, ", pop[best])
+    # print("best:, ", pop[best])
     # saves results
     file_aux  = open(experiment_name+'/results.txt','a')
     print( '\n GENERATION '+str(i)+' '+str(round(fit_pop[best],6))+' '+str(round(mean,6))+' '+str(round(std,6)))
