@@ -39,7 +39,7 @@ run_mode = 'train'
 
 # standard variables
 n_hidden = 10
-pop_size = 4
+pop_size = 3
 n_gens = 2
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5
 upper_w = 1
@@ -48,7 +48,7 @@ lower_w = -1
 # sigma for normal dist, tau constant,  mut_prob prop mutation for individu
 sigma = 1
 tau = 1/np.sqrt(n_weights)
-mut_prob = 1/pop_size
+mut_prob = 0.1
 mate_prob = 0.8
 average_pops = []
 std_pops = []
@@ -98,11 +98,13 @@ def self_adaptive_mutate(individual, sigma, indpb, mu = 0):
     return individual + xadd
 
 # natural selection of population, without replacement
-def natural_selection(selectionpop, pop_size):
+def natural_selection(selectionpop, pop_size, n_select=3):
     fitselect = [ind.fitness.values[0] for ind in selectionpop]
     pop = []
     for _ in range(pop_size):
-        idx_inds = random.sample(range(len(fitselect)), 2)
+        if len(selectionpop) < 3:
+            n_select = len(selectionpop)
+        idx_inds = random.sample(range(len(fitselect)), n_select)
         fitness_inds = np.array(fitselect)[idx_inds]
         best_idx = idx_inds[np.argmax(fitness_inds)]
         pop.append(selectionpop.pop(best_idx))
@@ -181,7 +183,7 @@ for n_sim in range(10):
     std_pops.append(std)
     best_per_gen.append(pop_fit[best])
 
-    file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(n_sim+1, enemy),'a')
+    file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'w')
     print( '\n GENERATION '+str(0)+ ' Ave fit: '+str(round(mean,6))+ ' Std:  '+str(round(std,6))+ ' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
 
     file_aux.write('GEN ' + 'Mean fit ' + 'Std ' + 'Best ' + 'Ave life' + '\n')
@@ -233,7 +235,7 @@ for n_sim in range(10):
 
 
         if pop_fit[best] > best_overall:
-            np.savetxt(experiment_name + '/enemy {}/sim {}/best_solution.txt'.format(n_sim+1, enemy), pop[best])
+            np.savetxt(experiment_name + '/enemy {}/sim {}/best_solution.txt'.format(enemy, n_sim+1), pop[best])
             noimprove = 0
         else:
             noimprove += 1
@@ -244,7 +246,7 @@ for n_sim in range(10):
             noimprove = 0
 
         # save result
-        file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1),'a')
+        file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'w')
         print( '\n GENERATION '+str(n_gen + 1)+' Ave fit: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
         file_aux.write(str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) +' ' + str(round(mean_life, 6)) +'\n')
         file_aux.close()
@@ -255,3 +257,8 @@ for n_sim in range(10):
     np.savetxt(experiment_name + "/enemy {}/sim {}/std_gen.txt".format(enemy, n_sim+1), std_pops)
     np.savetxt(experiment_name + "/enemy {}/sim {}/best_per_gen.txt".format(enemy, n_sim+1), best_per_gen)
     np.savetxt(experiment_name + "/enemy {}/sim {}/mean_life.txt".format(enemy, n_sim+1), player_means)
+
+    average_pop = []
+    std_pops = []
+    best_per_gen = []
+    player_means = []
