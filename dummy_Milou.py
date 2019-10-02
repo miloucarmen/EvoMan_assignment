@@ -1,28 +1,37 @@
 ################################
 #                              #
 ################################
-# groetjes kas
-# imports framework
+# import evoman framework
 import sys
 sys.path.insert(0, 'evoman')
 from environment import Environment
 from demo_controller import player_controller
 
+# import DEAP evolutionary algorithm framework and other necessary imports
 import glob, os
 from deap import base, creator, tools
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-random.seed(1)
 
+
+random.seed(1)
+run_mode = 'train'
 experiment_name = 'dummy_Milou'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
 # initializes environment with ai player using random controller, playing against static enemy
-env = Environment(experiment_name=experiment_name, enemies = [2])
+env = Environment(experiment_name=experiment_name,
+                  enemies=[2],
+                  playermode="ai",
+                  player_controller=player_controller(),
+                  enemymode="static",
+                  #level=2,
+                  speed="fastest")
 
+#global vars
 n_hidden = 10
 n_pop = 10
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
@@ -35,18 +44,23 @@ upper_bound = 1
 # sigma for normal dist, tao constant,  pm prop mutation for individu
 sigma = 1
 tau = 1/np.sqrt(n_weights)
-mut_prob = 1/n_pop
+mut_prob = 0.1
 
-
+# create base for evo algorithm, fitness to be optimized and individual is an array and a fitness
 creator.create("FitnessMax", base.Fitness, weights = (1.0,))
-creator.create("Individual", list, fitness = creator.FitnessMax)
+creator.create("Individual", np.ndarray, fitness = creator.FitnessMax)
 
+# create toolbox
 tlbx = base.Toolbox()
+
+# register exact def of individual it class Individual with a n_weights long initialized array of random numbers
 tlbx.register("atrr_float", random.uniform, low_bound, upper_bound)
 tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n = n_weights)
+
+# Population is n_pop long list of individuals
 tlbx.register("Population", tools.initRepeat, list, tlbx.individual, n = n_pop)
 
-
+# start logbook, create initial population and a individual for the future best solution.
 log = tools.Logbook()
 Pop = tlbx.Population()
 best = tlbx.individual()
@@ -56,18 +70,6 @@ best = tlbx.individual()
 def EvaluateFit(individual):
     f,p,e,t = env.play(pcont=individual)
     return f,
-
-def Normalise(fit, fitnesses):
-
-    if ( max(fitnesses) - min(fitnesses) ) > 0 :
-        fitnorm = ( fit - min(fitnesses) )/( max(fitnesses) - min(fitnesses) )
-
-    else :
-        fitnorm = 0
-
-    if fitnorm < 0:
-            fitnorm = 0.0000000001
-    return fitnorm
 
 # changes sigma over time
 def modify_sigma(tau, sigma=sigma):
@@ -87,7 +89,7 @@ def self_adaptive_mutate(individual, sigma, indpb):
             individual[i] = low_bound
     return individual
 
-# natural selection of population, without replacement
+# natural selection of population, without chance of picking the same individual twice
 def natural_selection(selectionpop, pop_size):
     fitselect = [ind.fitness.values[0] for ind in selectionpop]
     pop = []
@@ -106,7 +108,7 @@ def Doomsday(pop, fit, sigma):
     orderasc = order[0:worst]
 
     for i in orderasc:
-        self_adaptive_mutate(pop[i], sigma, indpb=0.05)
+        self_adaptive_mutate(pop[i], sigma, indpb=1)
         newfit = tlbx.evaluate(pop[i])
         pop[i].fitness.values = newfit
 
@@ -125,14 +127,27 @@ def uniform_parent(pop): # the pop the portion of total pop you want as chosen i
 
     return chosen_ind
 
+
+
 tlbx.register("evaluate", EvaluateFit)
-tlbx.register("mate", tools.cxUniform, indpb = 0.5)
+tlbx.register("mate", tools.cxBlend)
 tlbx.register("mutate", self_adaptive_mutate, indpb=0.05)
-tlbx.register("select",uniform_parent)
-tlbx.register('survival',natural_selection)
-tlbx.register("Doomsday",Doomsday)
+tlbx.register("select", uniform_parent)
+tlbx.register('survival', natural_selection)
+tlbx.register("Doomsday", Doomsday)
+
 
 OffProb = 0.8
+
+if run_mode =='test':
+
+    bsol = np.loadtxt(experiment_name+'/best.txt')
+    print(bsol)
+    print( '\n RUNNING SAVED BEST SOLUTION \n')
+    env.update_parameter('speed','normal')
+    tlbx.evaluate(bsol)
+
+    sys.exit(0)
 
 
 fitns = list(map(tlbx.evaluate, Pop))
@@ -152,8 +167,10 @@ print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+'
 file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get("meanfit"),6))+' '+str(round(log[n_gen].get("stdfit"),6))+' '+str(round(log[n_gen].get("maxfit"),6))   )
 file_aux.close()
 
-best = tlbx.clone(Pop[fit.index(np.max(fit))])
-print(best)
+index = fit.index(np.max(fit))
+ind = Pop[index]
+best = tlbx.clone(ind)
+
 # saves file with the best solution
 np.savetxt(experiment_name+'/best.txt', best)
 
@@ -166,7 +183,7 @@ while max(fit) < 100 and n_gen < max_gens:
     
     for child1, child2 in zip(offspring[::2], offspring[1::2]):
         if random.random() < OffProb:
-            tlbx.mate(child1,child2)
+            tlbx.mate(child1,child2, random.random())
             del child1.fitness.values
             del child2.fitness.values
         
@@ -183,9 +200,12 @@ while max(fit) < 100 and n_gen < max_gens:
     for ind, fit in zip(new_ind, fitns):
         ind.fitness.values = fit
 
+    print([ind.fitness.values[0] for ind in offspring])
+
     Pop[:] = tlbx.survival(offspring, len(Pop))
 
     fits = [ind.fitness.values[0] for ind in Pop]
+    print(fits)
 
     log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), optweightcombination = Pop[fits.index(np.max(fits))])
     # save result
@@ -195,8 +215,11 @@ while max(fit) < 100 and n_gen < max_gens:
     file_aux.close()
     
 
-    if best.fitness.values <= Pop[fits.index(np.max(fits))].fitness.values:
-        best = tlbx.clone(Pop[fits.index(np.max(fits))])
+    if best.fitness.values < log[n_gen].get("maxfit"):
+        
+        index = fit.index(np.max(fit))
+        ind = Pop[index]
+        best = tlbx.clone(ind)
         
         # saves file with the best solution
         np.savetxt(experiment_name+'/best.txt', best)
@@ -206,7 +229,7 @@ while max(fit) < 100 and n_gen < max_gens:
     else :
         noimprovement = 0
     
-    if noimprovement > 15:
+    if noimprovement > 3:
         print('~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
         del log[n_gen]
         tlbx.Doomsday(Pop, fits, sigma)
