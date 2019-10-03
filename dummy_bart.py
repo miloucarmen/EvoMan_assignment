@@ -22,7 +22,7 @@ if not os.path.exists(experiment_name):
 # random.seed(1)
 
 # enemy(ies) to play against
-enemy = 1
+enemy = 2
 
 if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
     os.makedirs(experiment_name + '/enemy {}'.format(enemy))
@@ -250,7 +250,7 @@ for n_sim in range(10):
             noimprove += 1
 
         if noimprove > n_gens//4:
-            print("doom")
+            print("Doomsday")
             pop = doomsday(pop, pop_fit, sigma)
             noimprove = 0
 
