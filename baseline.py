@@ -6,8 +6,8 @@ sys.path.insert(0, 'evoman')
 from environment import Environment
 
 enemy_number = 1
-n_pop = 1
-n_sim = 3
+n_pop = 50
+n_sim = 10
 experiment_name = 'baseline_enemy_' + str(enemy_number)
 
 if not os.path.exists(experiment_name):
