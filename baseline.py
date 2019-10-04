@@ -41,6 +41,10 @@ for sim in range(n_sim):
     all_avg.append(avg_pop)
     all_std.append(std_pop)
 
+###############################################################################
+############################# Results #########################################
+###############################################################################
+
 result = 'All means:\n' + str(all_avg) + '\nAll STD: \n' + str(all_std) +'\nMean average:\n' + str(np.mean(all_avg)) + '\nSTD average\n' + str(np.mean(all_std))
 
 with open(experiment_name + '.txt', "w") as file:

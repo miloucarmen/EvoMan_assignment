@@ -2,7 +2,7 @@
 # Course: Evolutionary Computing                                              #  
 # Summary: With this file, a simulation of the game evoman can be run. The    #
 # player will be controlled by a neural network. Neural networks can be       # 
-# trained or tested.                                                          #
+# trained or tested. This is the implementation of algorithm A                #
 ###############################################################################
 
 # Import evoman framework
@@ -17,15 +17,15 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
+###############################################################################
+################################# Setup #######################################
+###############################################################################
+
 run_mode = 'train'
 experiment_name = 'offi_Milou'
 enemy = 2 
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
-
-###############################################################################
-################################# Setup #######################################
-###############################################################################
 
 # Initialize environment with an ai player using a random controller, playing
 # against a static enemy
@@ -36,7 +36,7 @@ env = Environment(experiment_name = experiment_name,
                   enemymode = 'static',
                   speed = 'fastest')
 
-# Global variables
+# Standard variables
 n_train_simulations = 3
 n_hidden = 10
 n_pop = 2
@@ -124,9 +124,6 @@ def Doomsday(pop, fit, sigma):
 
 # The pop the portion of total pop you want as chosen individuals
 def uniform_parent(pop):
-
-    '''the selection for the 'mating population' is created by uniform distribution
-    and is 3 times the size of the orginial population'''
     chosen_ind = []
     len_matingpop = 3 * len(pop)
 

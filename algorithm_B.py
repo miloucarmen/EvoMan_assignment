@@ -1,11 +1,11 @@
-'''
-algorithmB.py
+###############################################################################
+# Course: Evolutionary Computing                                              #
+# Summary: With this file, a simulation of the game evoman can be run. The    #
+# player will be controlled by a neural network. Neural networks can be       # 
+# trained or tested. This is the implementation of algorithm B                #
+###############################################################################
 
-'''
-
-
-
-# imports framework
+# Import evoman framework
 import sys
 import os
 sys.path.insert(0, 'evoman')
@@ -17,19 +17,21 @@ from deap import base, creator, tools
 import random
 import numpy as np
 
+###############################################################################
+################################# Setup #######################################
+###############################################################################
+
 experiment_name = 'algorithmB'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
-
-# random.seed(1)
-
-# enemy(ies) to play against
 enemy = 3
 
 if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
     os.makedirs(experiment_name + '/enemy {}'.format(enemy))
-# initializes environment with ai player using random controller, playing against static enemy
+
+# initializes environment with ai player using random controller, playing 
+# against static enemy.
 env = Environment(experiment_name=experiment_name,
                   enemies=[enemy],
                   playermode="ai",
@@ -40,7 +42,7 @@ env = Environment(experiment_name=experiment_name,
 
 run_mode = 'train'
 
-# standard variables
+# Standard variables
 n_hidden = 10
 pop_size = 50
 n_gens = 20
@@ -48,7 +50,6 @@ n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5
 upper_w = 1
 lower_w = -1
 
-# sigma for normal dist, tau constant,  mut_prob prop mutation for individu
 sigma = 1
 tau = 1/np.sqrt(n_weights)
 mut_prob = 0.1
@@ -62,16 +63,23 @@ noimprove = 0
 
 log = tools.Logbook()
 tlbx = base.Toolbox()
-env.state_to_log() # checks environment state
+env.state_to_log()
 
-# register and create deap functions and classes
+###############################################################################
+################################ Functions ####################################
+###############################################################################
+
+# Register and create deap functions and classes
 def register_deap_functions():
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax, lifepoints=1)
+    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax, 
+                   lifepoints=1)
 
     tlbx.register("atrr_float", np.random.uniform, low=lower_w, high=upper_w)
-    tlbx.register("individual", tools.initRepeat, creator.Individual, tlbx.atrr_float, n=n_weights)
-    tlbx.register("population", tools.initRepeat, list, tlbx.individual, n=pop_size)
+    tlbx.register("individual", tools.initRepeat, creator.Individual, 
+                  tlbx.atrr_float, n=n_weights)
+    tlbx.register("population", tools.initRepeat, list, tlbx.individual, 
+                  n=pop_size)
     tlbx.register("evaluate", evaluate)
 
     tlbx.register("blend_crossover", blend_crossover, alpha=.5)
@@ -84,23 +92,24 @@ def register_deap_functions():
     tlbx.register("select", uniform_parent)
     tlbx.register('survival', natural_selection)
 
-# evaluate individual
+# Evaluate individual
 def evaluate(individual):
     f,p,e,t = env.play(pcont=individual)
     individual.lifepoints = p
     return f,
 
-# changes sigma over time
+# Changes sigma over time
 def modify_sigma(tau, sigma=sigma):
     return sigma * np.exp(tau*np.random.normal(0,1))
 
-# mutates alles of gen with p indpb
+# Mutates alles of gen with p indpb
 def self_adaptive_mutate(individual, sigma, indpb, mu = 0):
     normal_dist = np.random.normal(mu, sigma, len(individual))
-    xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0, normal_dist)
+    xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0, 
+                    normal_dist)
     return individual + xadd
 
-# natural selection of population, without replacement
+# Natural selection of population, without replacement
 def natural_selection(selectionpop, pop_size, n_select=3):
     fitselect = [ind.fitness.values[0] for ind in selectionpop]
     pop = []
@@ -114,7 +123,7 @@ def natural_selection(selectionpop, pop_size, n_select=3):
         fitselect.pop(best_idx)
     return pop
 
-# blend crossover function, returns two children
+# Blend crossover function, returns two children
 def blend_crossover(parent1, parent2, alpha=0.5):
     d = abs(parent1 - parent2)
 
@@ -122,10 +131,8 @@ def blend_crossover(parent1, parent2, alpha=0.5):
     child2 = creator.Individual(np.random.uniform(np.minimum(parent1, parent2)-alpha*d, np.maximum(parent1, parent2)+alpha*d))
     return child1, child2
 
-def uniform_parent(pop): # the pop the portion of total pop you want as chosen individuals
-
-    """the selection for the 'mating population' is created by uniform distribution
-    and is 3 times the size of the orginial population"""
+# The portion of the total population you want as chosen individuals.  
+def uniform_parent(pop): 
     chosen_ind = []
     len_matingpop = len(pop)
 
@@ -135,7 +142,8 @@ def uniform_parent(pop): # the pop the portion of total pop you want as chosen i
 
     return chosen_ind
 
-# checks the an individual for its values, if over boundary
+# Check if the newly assigned weights don't go over or under the set 
+# boundaries.
 def check_bounds(ind, lower_w, upper_w):
     for i in range(len(ind)):
         if ind[i] > upper_w:
@@ -144,7 +152,7 @@ def check_bounds(ind, lower_w, upper_w):
             ind[i] = lower_w
     return ind
 
-# replace worst half of pop by mutating every allele in genome
+# Replace worst half of pop by mutating every allele in genome.
 def doomsday(pop, pop_fit, sigma):
     worst = len(pop)//2
     order = np.argsort(pop_fit)
@@ -158,14 +166,17 @@ def doomsday(pop, pop_fit, sigma):
     pop_fit = [ind.fitness.values[0] for ind in pop]
     return pop
 
-# register deap functions
 register_deap_functions()
+
+###############################################################################
+############################# Evolution #######################################
+###############################################################################
 
 for n_sim in range(10):
 
     if not os.path.exists(experiment_name+'/enemy {}/sim {}'.format(enemy, n_sim+1)):
         os.makedirs(experiment_name+'/enemy {}/sim {}'.format(enemy, n_sim+1))
-    print("-------------------------Simulation {}----------------------------------------------".format(n_sim+1))
+    print("-------------Simulation {}-------------------".format(n_sim+1))
     # initializes population at random
     pop = tlbx.population()
     pop_fit = [tlbx.evaluate(ind) for ind in pop]
@@ -194,7 +205,7 @@ for n_sim in range(10):
     file_aux.close()
 
     for n_gen in range(n_gens):
-        print("---------------------Generation {}-------------------------".format(n_gen + 1))
+        print("------------Generation {}-------------".format(n_gen + 1))
 
         offspring = tlbx.select(pop)
         offspring = list(map(tlbx.clone, offspring))
@@ -238,9 +249,10 @@ for n_sim in range(10):
 
         print("Pop:", pop_fit)
 
+###############################################################################
+############################# Results #########################################
+###############################################################################
 
-
-        # save result
         file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'a')
         print( '\n GENERATION '+str(n_gen + 1)+' Ave fit: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
         file_aux.write(str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) +' ' + str(round(mean_life, 6)) +'\n')
