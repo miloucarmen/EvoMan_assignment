@@ -15,16 +15,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+
 # set seed, which mode and name experiment
 run_mode = 'train'
 experiment_name = 'offi_Milou'
-enemy = 2 
+enemies = [1,2,3]
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
 # initializes environment with ai player using random controller, playing against static enemy
 env = Environment(experiment_name=experiment_name,
-                  enemies=[enemy],
+                  enemies=[3],
                   playermode='ai',
                   player_controller=player_controller(),
                   enemymode='static',
@@ -32,11 +33,11 @@ env = Environment(experiment_name=experiment_name,
                   speed='fastest')
 
 #global vars
-n_train_simulations = 3
+n_train_simulations = 10
 n_hidden = 10
-n_pop = 2
+n_pop = 50
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
-max_gens = 2
+max_gens = 20
 noimprovement = 0
 low_bound = -1
 upper_bound = 1
@@ -134,15 +135,35 @@ tlbx.register('Doomsday', Doomsday)
 ###################################### End functions ########################################
 
 # if test mode
-if run_mode =='test':
+# if run_mode =='test':
+#     df = pd.DataFrame(index= [np.arange(n_train_simulations*2)], columns= (enemies + ['Algorithm']))
 
-    bsol = np.loadtxt(experiment_name+'/best.txt')
-    print(bsol)
-    print( '\n RUNNING SAVED BEST SOLUTION \n')
-    env.update_parameter('speed','normal')
-    tlbx.evaluate(bsol)
+#     for i in range(10):
+#         df[enemy][2*i] = 10 + i
+#         df[enemy][(2*i + 1)] = 11 + i
+        
+#         print(df)
+    
+#     df = pd.DataFrame(columns = ['Algorithm'])
+#     for enemy in enemies:
 
-    sys.exit(0)
+#         df['enemy' + str(enemy)] = 0
+
+#         for i in range(n_train_simulations):
+#             bsol_bart = np.loadtxt('dummy_bart/enemy'+ str(enemy) +'/sim '+ str(i) +'best_solution.txt')
+#             bsol_Milou = np.loadtxt(experiment_name+'/best'+ str(i) + '.txt')
+
+#             df([enemy][2*i] = tlbx.evaluate(bsol_bart)
+#             df[enemy][(2*i + 1)] = = tlbx.evaluate(bsol_Milou)
+#             df['Algorithm'][2*i] = 1
+#             df['Algorithm'][(2*i + 1)] = 2
+
+
+
+#     ax = sns.boxplot(x='enemy', y="Fitness", hue="smoker", data=[f_bart, f_Milou], palette="Set3")
+
+
+    # sys.exit(0)
 
 
 # train mode
@@ -175,7 +196,7 @@ if run_mode == 'train':
         
 
         # saves stats of first gen
-        file_aux  = open(experiment_name+'/results'+ str(i) +'.txt','a')
+        file_aux  = open(experiment_name+'/enemy'+ str(enemies[2])+'results'+ str(i) +'.txt','a')
         file_aux.write('\n\ngen mean std max')
         print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
         file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6))   )
@@ -187,7 +208,7 @@ if run_mode == 'train':
         best = tlbx.clone(ind)
 
         # saves file with the best solution
-        np.savetxt(experiment_name+'/best'+ str(i) +'.txt', best)
+        np.savetxt(experiment_name+'/enemy'+ str(enemies[2])+'best'+ str(i) +'.txt', best)
 
 
         for n_gen in range(max_gens):
@@ -233,7 +254,7 @@ if run_mode == 'train':
             log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), avelifepoint = np.mean(lifepoint))
             
             # save result
-            file_aux  = open(experiment_name+'/results'+ str(i) +'.txt','a')
+            file_aux  = open(experiment_name+'/enemy'+ str(enemies[2])+'results'+ str(i) +'.txt','a')
             print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
             file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6))   )
             file_aux.close()
@@ -248,7 +269,7 @@ if run_mode == 'train':
                 best = tlbx.clone(ind)
                 
                 # saves file with the best solution
-                np.savetxt(experiment_name+'/best'+ str(i) +'.txt', best)
+                np.savetxt(experiment_name+'/enemy'+ str(enemies[2])+'best'+ str(i) +'.txt', best)
 
             # checks if meanfit keeps improving
             if log[n_gen].get('meanfit') <= log[n_gen - 1].get('meanfit') : 
@@ -270,7 +291,7 @@ if run_mode == 'train':
                 log.record(gen = n_gen, meanfit = np.mean(fits), varfit = np.var(fits), stdfit = np.std(fits), maxfit =  np.max(fits), avelifepoint = np.mean(lifepoint))
             
                 # save result
-                file_aux  = open(experiment_name+'/results'+ str(i) +'.txt','a')
+                file_aux  = open(experiment_name+'/enemy'+ str(enemies[2])+'results'+ str(i) +'.txt','a')
                 print( '\n ~~~~~~~~~~DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOM~~~~~~~~~~')
                 file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6))   )
                 file_aux.close()
@@ -309,7 +330,7 @@ pl[1].set_ylabel('Average std')
 pl[2].plot(Logs[0].select('gen'), lifepoint_average)
 pl[2].set_ylabel('Average life')
 pl[2].set_xlabel('Generations')
-fig.savefig('enemy2.png')
+fig.savefig('enemy3.png')
 
 
 plt.show()
