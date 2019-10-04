@@ -22,7 +22,7 @@ if not os.path.exists(experiment_name):
 # random.seed(1)
 
 # enemy(ies) to play against
-enemy = 2
+enemy = 3
 
 if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
     os.makedirs(experiment_name + '/enemy {}'.format(enemy))
