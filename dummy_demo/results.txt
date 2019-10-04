@@ -1,6 +1,0 @@
-
-
-gen mean var std max weights
-
-gen mean var std max weights
-0 15.811649 11.531763 39.21004
