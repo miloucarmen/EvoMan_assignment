@@ -1,6 +1,9 @@
-################################
-#                              #
-################################
+'''
+algorithmB.py
+
+'''
+
+
 
 # imports framework
 import sys
@@ -14,7 +17,7 @@ from deap import base, creator, tools
 import random
 import numpy as np
 
-experiment_name = 'dummy_bart'
+experiment_name = 'algorithmB'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
