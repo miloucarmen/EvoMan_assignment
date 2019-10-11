@@ -1,6 +1,5 @@
 '''
-algorithmB.py
-
+algorithmB.py ...
 '''
 
 
@@ -25,7 +24,7 @@ if not os.path.exists(experiment_name):
 # random.seed(1)
 
 # enemy(ies) to play against
-enemy = 3
+enemy = 2
 
 if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
     os.makedirs(experiment_name + '/enemy {}'.format(enemy))
