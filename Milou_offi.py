@@ -248,6 +248,7 @@ if run_mode == 'train':
             # replaces pop and retrives all fitnesses
             Pop[:] = tlbx.survival(offspring, len(Pop))
             fits = [ind.fitness.values[0] for ind in Pop]
+        
             lifepoint = [ind.lifepoint for ind in Pop]
 
             # logs results
