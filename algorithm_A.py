@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 ###############################################################################
 
 run_mode = 'train'
-experiment_name = 'algorithm_A_of'
+experiment_name = 'algorithm_A'
 
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
@@ -33,7 +33,7 @@ if not os.path.exists(experiment_name):
 # Initialize environment with an ai player using a random controller, playing
 # against a static enemy
 env = Environment(experiment_name = experiment_name,
-                  enemies = [1,2,3],
+                  enemies = [2,6],
                   multiplemode="yes",
                   playermode = 'ai',
                   player_controller = player_controller(),
@@ -117,18 +117,18 @@ def natural_selection(selectionpop, pop_size):
         fitselect.pop(best_idx)
     return pop
 
-# Replaces 25% of population
-def Doomsday(pop, fit):
-    worst = int(n_pop/4) 
-    order = np.argsort(fit)
-    orderasc = order[0:worst]
+# # Replaces 25% of population
+# def Doomsday(pop, fit):
+#     worst = int(n_pop/4) 
+#     order = np.argsort(fit)
+#     orderasc = order[0:worst]
     
-    for i in orderasc:
-        self_adaptive_mutate(pop[i], 1, indpb=1)
-        newfit = tlbx.evaluate(pop[i])
-        pop[i].fitness.values = newfit
+#     for i in orderasc:
+#         self_adaptive_mutate(pop[i], 1, indpb=1)
+#         newfit = tlbx.evaluate(pop[i])
+#         pop[i].fitness.values = newfit
 
-    return pop
+#     return pop
 
 # The pop the portion of total pop you want as chosen individuals
 def uniform_parent(pop):
@@ -147,26 +147,12 @@ tlbx.register('mate', tools.cxBlend)
 tlbx.register('mutate', self_adaptive_mutate, indpb=0.05)
 tlbx.register('select', uniform_parent)
 tlbx.register('survival', tools.selTournament, tournsize = 3)
-tlbx.register('Doomsday', Doomsday)
+
 
 ###############################################################################
 ############################# Evolution #######################################
 ###############################################################################
 
-# Run test mode
-# if run_mode =='test':
-
-#             df([enemy][2*i] = tlbx.evaluate(bsol_bart)
-#             df[enemy][(2*i + 1)] = = tlbx.evaluate(bsol_Milou)
-#             df['Algorithm'][2*i] = 1
-#             df['Algorithm'][(2*i + 1)] = 2
-
-
-
-#     ax = sns.boxplot(x='enemy', y="Fitness", hue="smoker", data=[f_bart, f_Milou], palette="Set3")
-
-
-    # sys.exit(0)
 
 # Run train mode
 if run_mode == 'train':
@@ -250,7 +236,7 @@ if run_mode == 'train':
 
                 # Mating
                 if random.random() < OffProb:
-                    tlbx.mate(parent1, parent2, random.random())
+                    tlbx.mate(parent1, parent2, 0.5)
                     del parent1.fitness.values
                     del parent2.fitness.values
 
@@ -289,31 +275,6 @@ if run_mode == 'train':
 
                 np.savetxt(experiment_name+'/generalist/sim {}'.format(i+1)+'/best' + '.txt', best)
 
-            # Check if meanfit keeps improving
-            if log[n_gen].get('meanfit') <= bestmean : 
-                noimprovement += 1
-            else :
-                noimprovement = 0
-                bestmean = np.mean(fits)
-            
-            # If the period without improvement is to long, doomsday will be 
-            # called upon the generation.
-            if noimprovement > (max_gens//10):
-
-                # deletes log domed gen, initialize a new population and fitness
-                del log[n_gen]
-
-                tlbx.Doomsday(Pop, fits)
-                fits = [ind.fitness.values[0] for ind in Pop]
-                lifepoint = [ind.lifepoint for ind in Pop]
-                noimprovement = 0
-
-                # Log results
-                log.record(gen = n_gen, meanfit = np.mean(fits), 
-                       varfit = np.var(fits), stdfit = np.std(fits), 
-                       maxfit = np.max(fits), 
-                       avelifepoint = np.mean(lifepoint))
-
             # Save results in text files
             file_aux  = open(experiment_name+'/generalist/sim {}'.format(i+1)+'/results' +'.txt','a')
             print('\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
@@ -335,46 +296,13 @@ if run_mode == 'train':
             np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/std_gen.txt', std_pops)
             np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/best_per_gen.txt', best_per_gen)
             np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/mean_life.txt', player_means)
-            
+
 
 
             Logs[i] = log
+        average_pops = []
+        std_pops = []
+        best_per_gen = []
+        player_means = []
        
-###############################################################################
-############################# Results #########################################
-###############################################################################
 
-# Collect results
-# mean_average = []
-# std_average = []
-# lifepoint_average = []
-
-# for i in range(n_train_simulations):
-#     mean_average.append(Logs[i].select('meanfit'))
-#     std_average.append(Logs[i].select('stdfit'))
-#     lifepoint_average.append(Logs[i].select('avelifepoint'))
-
-# mean_average = np.sum(mean_average, 0)
-# std_average = np.sum(std_average, 0)
-# lifepoint_average = np.sum(lifepoint_average, 0)
-
-# mean_average[:] = [x / n_train_simulations for x in mean_average]
-# std_average[:] = [x / n_train_simulations for x in std_average]
-# lifepoint_average[:] = [x / n_train_simulations for x in lifepoint_average]
- 
-# # Plot results   
-# fig, pl = plt.subplots(3)
-
-# pl[0].plot(Logs[0].select('gen'), mean_average)
-# pl[0].set_ylabel('Average fit')
-# pl[1].plot(Logs[0].select('gen'), std_average)
-# pl[1].set_ylabel('Average std')
-# pl[2].plot(Logs[0].select('gen'), lifepoint_average)
-# pl[2].set_ylabel('Average life')
-# pl[2].set_xlabel('Generations')
-# fig.savefig('enemy3.png')
-
-# plt.show()
-
-# print(log.select('meanfit'))
-# print(best.fitness.values)
