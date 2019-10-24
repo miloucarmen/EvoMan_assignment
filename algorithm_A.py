@@ -7,12 +7,15 @@
 
 # Import evoman framework
 import sys
+import os
 sys.path.insert(0, 'evoman')
 from environment import Environment
 from demo_controller import player_controller
 
-import glob, os
-from deap import base, creator, tools
+import glob
+from deap import base
+from deap import creator
+from deap import tools
 import random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,22 +25,24 @@ import matplotlib.pyplot as plt
 ###############################################################################
 
 run_mode = 'train'
-experiment_name = 'offi_Milou'
-enemies = [1,2,3]
+experiment_name = 'algorithm_A_of'
+
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
 # Initialize environment with an ai player using a random controller, playing
 # against a static enemy
 env = Environment(experiment_name = experiment_name,
-                  enemies = [enemy],
+                  enemies = [1,2,3],
+                  multiplemode="yes",
                   playermode = 'ai',
                   player_controller = player_controller(),
                   enemymode = 'static',
                   speed = 'fastest')
 
+
 # Standard variables
-n_train_simulations = 3
+n_train_simulations = 10
 n_hidden = 10
 n_pop = 50
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
@@ -45,6 +50,11 @@ max_gens = 20
 noimprovement = 0
 low_bound = -1
 upper_bound = 1
+average_pops = []
+std_pops = []
+best_per_gen = []
+player_means = []
+
 
 sigma = 1
 tau = 1/np.sqrt(n_weights)
@@ -54,16 +64,14 @@ OffProb = 0.8
 # Create a deap base object, containing the fitness function and the individual
 # type.
 creator.create('FitnessMax', base.Fitness, weights = (1.0,))
-creator.create('Individual', np.ndarray, fitness = creator.FitnessMax, 
-			    lifepoint = 1)
+creator.create('Individual', np.ndarray, fitness = creator.FitnessMax, lifepoint = 1)
 
 tlbx = base.Toolbox()
 
 # Register exact definition of an individual: An n_weights-long array of random
 # numbers.
 tlbx.register('atrr_float', random.uniform, low_bound, upper_bound)
-tlbx.register('individual', tools.initRepeat, creator.Individual, 
-              tlbx.atrr_float, n = n_weights)
+tlbx.register('individual', tools.initRepeat, creator.Individual, tlbx.atrr_float, n = n_weights)
 
 # Population is n_pop long list of individuals
 tlbx.register('Population', tools.initRepeat, list, tlbx.individual, n = n_pop)
@@ -110,13 +118,13 @@ def natural_selection(selectionpop, pop_size):
     return pop
 
 # Replaces 25% of population
-def Doomsday(pop, fit, sigma):
+def Doomsday(pop, fit):
     worst = int(n_pop/4) 
     order = np.argsort(fit)
     orderasc = order[0:worst]
-
+    
     for i in orderasc:
-        self_adaptive_mutate(pop[i], sigma, indpb=1)
+        self_adaptive_mutate(pop[i], 1, indpb=1)
         newfit = tlbx.evaluate(pop[i])
         pop[i].fitness.values = newfit
 
@@ -146,7 +154,7 @@ tlbx.register('Doomsday', Doomsday)
 ###############################################################################
 
 # Run test mode
-if run_mode =='test':
+# if run_mode =='test':
 
 #             df([enemy][2*i] = tlbx.evaluate(bsol_bart)
 #             df[enemy][(2*i + 1)] = = tlbx.evaluate(bsol_Milou)
@@ -165,7 +173,9 @@ if run_mode == 'train':
 
     Logs = {}
     for i in range(n_train_simulations):
-        print('new')
+        if not os.path.exists(experiment_name+'/generalist/sim {}'.format(i+1)):
+            os.makedirs(experiment_name+'/generalist/sim {}'.format(i+1))
+
         n_gen = 0
 
         log = tools.Logbook()
@@ -182,6 +192,17 @@ if run_mode == 'train':
         maxval = np.max(fit)
         index = fit.index(maxval)
         lifepoint = [ind.lifepoint for ind in Pop]
+        
+        bestmean = np.mean(fit)
+        maxgen = np.max(fit)
+        std = np.std(fit)
+        mean_life = np.mean(lifepoint)
+
+        player_means.append(mean_life)
+        average_pops.append(bestmean)
+        std_pops.append(std)
+        best_per_gen.append(maxgen)
+
 
         # Log results
         log.record(gen = n_gen, meanfit = np.mean(fit), varfit = np.var(fit), 
@@ -189,10 +210,12 @@ if run_mode == 'train':
                    avelifepoint = np.mean(lifepoint))
 
         # Save stats of first generation
-        file_aux  = open(experiment_name+'/results'+ str(i) +'.txt','a')
-        file_aux.write('\n\ngen mean std max')
+        
+        file_aux  = open(experiment_name+'/generalist/sim {}'.format(i+1)+'/results' +'.txt','a')
         print( '\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
-        file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
+        
+        file_aux.write('\n' +'GEN ' + 'Mean fit ' + 'Std ' + 'Best ' + 'Ave life' + '\n')
+        file_aux.write(str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
         file_aux.close()
 
         # Get best instance of first generation
@@ -201,7 +224,7 @@ if run_mode == 'train':
         best = tlbx.clone(ind)
 
         # Save file with the best solution
-        np.savetxt(experiment_name+'/best'+ str(i) +'.txt', best)
+        np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/best' + '.txt', best)
 
         # Evolution
         for n_gen in range(max_gens):
@@ -244,18 +267,18 @@ if run_mode == 'train':
         
             lifepoint = [ind.lifepoint for ind in Pop]
 
+            maxgen = np.max(fits)
+            std = np.std(fits)
+            mean = np.mean(fits)
+            mean_life = np.mean(lifepoint)
+
             # Log results
-            log.record(gen = n_gen, meanfit = np.mean(fits), 
-                       varfit = np.var(fits), stdfit = np.std(fits), 
+            log.record(gen = n_gen, meanfit = mean, 
+                       varfit = np.var(fits), stdfit = std, 
                        maxfit = np.max(fits), 
-                       avelifepoint = np.mean(lifepoint))
-            
-            # Save results in text files
-            file_aux  = open(experiment_name+'/results'+ str(i) +'.txt','a')
-            print('\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
-            file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
-            file_aux.close()
-            
+                       avelifepoint = mean_life)
+
+
             # Checks if the best instance of the current generation is the 
             # overall best so far.
             if best.fitness.values < log[n_gen].get('maxfit'):
@@ -264,37 +287,56 @@ if run_mode == 'train':
                 ind = Pop[index]
                 best = tlbx.clone(ind)
 
-                np.savetxt(experiment_name+'/best'+ str(i) +'.txt', best)
+                np.savetxt(experiment_name+'/generalist/sim {}'.format(i+1)+'/best' + '.txt', best)
 
             # Check if meanfit keeps improving
-            if log[n_gen].get('meanfit') <= log[n_gen - 1].get('meanfit') : 
+            if log[n_gen].get('meanfit') <= bestmean : 
                 noimprovement += 1
             else :
                 noimprovement = 0
+                bestmean = np.mean(fits)
             
             # If the period without improvement is to long, doomsday will be 
             # called upon the generation.
             if noimprovement > (max_gens//10):
 
-                # Delete log of the doomed generation and initialize a new 
-                # population and fitness
+                # deletes log domed gen, initialize a new population and fitness
                 del log[n_gen]
-                tlbx.Doomsday(Pop, fits, sigma)
+
+                tlbx.Doomsday(Pop, fits)
                 fits = [ind.fitness.values[0] for ind in Pop]
                 lifepoint = [ind.lifepoint for ind in Pop]
                 noimprovement = 0
 
-                # Log result
+                # Log results
                 log.record(gen = n_gen, meanfit = np.mean(fits), 
-                           varfit = np.var(fits), stdfit = np.std(fits), 
-                           maxfit =  np.max(fits), 
-                           avelifepoint = np.mean(lifepoint))
+                       varfit = np.var(fits), stdfit = np.std(fits), 
+                       maxfit = np.max(fits), 
+                       avelifepoint = np.mean(lifepoint))
 
-                # Save result
-                file_aux  = open(experiment_name+'/results'+ str(i) 
-                	             +'.txt','a')
-                file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
-                file_aux.close()
+            # Save results in text files
+            file_aux  = open(experiment_name+'/generalist/sim {}'.format(i+1)+'/results' +'.txt','a')
+            print('\n GENERATION '+str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
+            file_aux.write('\n'+ str(n_gen)+' '+str(round(log[n_gen].get('meanfit'),6))+' '+str(round(log[n_gen].get('stdfit'),6))+' '+str(round(log[n_gen].get('maxfit'),6)))
+            file_aux.close()
+
+            print(np.mean(fits))
+            maxgen = np.max(fits)
+            std = np.std(fits)
+            mean = np.mean(fits)
+            mean_life = np.mean(lifepoint)
+
+            player_means.append(mean_life)
+            average_pops.append(bestmean)
+            std_pops.append(std)
+            best_per_gen.append(maxgen)
+
+            np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/mean_gen.txt', average_pops)
+            np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/std_gen.txt', std_pops)
+            np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/best_per_gen.txt', best_per_gen)
+            np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/mean_life.txt', player_means)
+            
+
 
             Logs[i] = log
        
@@ -303,36 +345,36 @@ if run_mode == 'train':
 ###############################################################################
 
 # Collect results
-mean_average = []
-std_average = []
-lifepoint_average = []
+# mean_average = []
+# std_average = []
+# lifepoint_average = []
 
-for i in range(n_train_simulations):
-    mean_average.append(Logs[i].select('meanfit'))
-    std_average.append(Logs[i].select('stdfit'))
-    lifepoint_average.append(Logs[i].select('avelifepoint'))
+# for i in range(n_train_simulations):
+#     mean_average.append(Logs[i].select('meanfit'))
+#     std_average.append(Logs[i].select('stdfit'))
+#     lifepoint_average.append(Logs[i].select('avelifepoint'))
 
-mean_average = np.sum(mean_average, 0)
-std_average = np.sum(std_average, 0)
-lifepoint_average = np.sum(lifepoint_average, 0)
+# mean_average = np.sum(mean_average, 0)
+# std_average = np.sum(std_average, 0)
+# lifepoint_average = np.sum(lifepoint_average, 0)
 
-mean_average[:] = [x / n_train_simulations for x in mean_average]
-std_average[:] = [x / n_train_simulations for x in std_average]
-lifepoint_average[:] = [x / n_train_simulations for x in lifepoint_average]
+# mean_average[:] = [x / n_train_simulations for x in mean_average]
+# std_average[:] = [x / n_train_simulations for x in std_average]
+# lifepoint_average[:] = [x / n_train_simulations for x in lifepoint_average]
  
-# Plot results   
-fig, pl = plt.subplots(3)
+# # Plot results   
+# fig, pl = plt.subplots(3)
 
-pl[0].plot(Logs[0].select('gen'), mean_average)
-pl[0].set_ylabel('Average fit')
-pl[1].plot(Logs[0].select('gen'), std_average)
-pl[1].set_ylabel('Average std')
-pl[2].plot(Logs[0].select('gen'), lifepoint_average)
-pl[2].set_ylabel('Average life')
-pl[2].set_xlabel('Generations')
-fig.savefig('enemy3.png')
+# pl[0].plot(Logs[0].select('gen'), mean_average)
+# pl[0].set_ylabel('Average fit')
+# pl[1].plot(Logs[0].select('gen'), std_average)
+# pl[1].set_ylabel('Average std')
+# pl[2].plot(Logs[0].select('gen'), lifepoint_average)
+# pl[2].set_ylabel('Average life')
+# pl[2].set_xlabel('Generations')
+# fig.savefig('enemy3.png')
 
-plt.show()
+# plt.show()
 
-print(log.select('meanfit'))
-print(best.fitness.values)
+# print(log.select('meanfit'))
+# print(best.fitness.values)
