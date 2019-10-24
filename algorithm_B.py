@@ -1,12 +1,3 @@
-<<<<<<< HEAD:alogrithmB.py
-'''
-algorithmB.py ...
-'''
-
-
-
-# imports framework
-=======
 ###############################################################################
 # Course: Evolutionary Computing                                              #
 # Summary: With this file, a simulation of the game evoman can be run. The    #
@@ -15,7 +6,6 @@ algorithmB.py ...
 ###############################################################################
 
 # Import evoman framework
->>>>>>> 1725543c5ed640fcf3ecd96a2f6e86f541d403d3:algorithm_B.py
 import sys
 import os
 sys.path.insert(0, 'evoman')
@@ -35,15 +25,10 @@ experiment_name = 'algorithmB'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
-<<<<<<< HEAD:alogrithmB.py
-
 # random.seed(1)
-
 # enemy(ies) to play against
 enemy = 2
-=======
-enemy = 3
->>>>>>> 1725543c5ed640fcf3ecd96a2f6e86f541d403d3:algorithm_B.py
+
 
 if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
     os.makedirs(experiment_name + '/enemy {}'.format(enemy))
