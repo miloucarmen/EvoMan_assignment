@@ -1,13 +1,16 @@
 ###############################################################################
 # Course: Evolutionary Computing                                              #
 # Summary: With this file, a simulation of the game evoman can be run. The    #
-# player will be controlled by a neural network. Neural networks can be       # 
+# player will be controlled by a neural network. Neural networks can be       #
 # trained or tested. This is the implementation of algorithm B                #
 ###############################################################################
 
 # Import evoman framework
 import sys
 import os
+from numba import jit, cuda
+import numpy as np
+
 sys.path.insert(0, 'evoman')
 from environment import Environment
 from demo_controller import player_controller
@@ -21,22 +24,20 @@ import numpy as np
 ################################# Setup #######################################
 ###############################################################################
 
-experiment_name = 'algorithmB'
+enemy = [2,6]
+
+experiment_name = 'algorithmB_generalist'
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
 
-# random.seed(1)
-# enemy(ies) to play against
-enemy = 2
+if not os.path.exists(experiment_name):
+    os.makedirs(experiment_name)
 
-
-if not os.path.exists(experiment_name + '/enemy {}'.format(enemy)):
-    os.makedirs(experiment_name + '/enemy {}'.format(enemy))
-
-# initializes environment with ai player using random controller, playing 
+# initializes environment with ai player using random controller, playing
 # against static enemy.
 env = Environment(experiment_name=experiment_name,
-                  enemies=[enemy],
+                  enemies=[2,6],
+                  multiplemode="yes",
                   playermode="ai",
                   player_controller=player_controller(),
                   enemymode="static",
@@ -61,6 +62,7 @@ average_pops = []
 std_pops = []
 best_per_gen = []
 player_means = []
+
 best_overall = 0
 noimprove = 0
 
@@ -75,13 +77,13 @@ env.state_to_log()
 # Register and create deap functions and classes
 def register_deap_functions():
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax, 
+    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax,
                    lifepoints=1)
 
     tlbx.register("atrr_float", np.random.uniform, low=lower_w, high=upper_w)
-    tlbx.register("individual", tools.initRepeat, creator.Individual, 
+    tlbx.register("individual", tools.initRepeat, creator.Individual,
                   tlbx.atrr_float, n=n_weights)
-    tlbx.register("population", tools.initRepeat, list, tlbx.individual, 
+    tlbx.register("population", tools.initRepeat, list, tlbx.individual,
                   n=pop_size)
     tlbx.register("evaluate", evaluate)
 
@@ -108,7 +110,7 @@ def modify_sigma(tau, sigma=sigma):
 # Mutates alles of gen with p indpb
 def self_adaptive_mutate(individual, sigma, indpb, mu = 0):
     normal_dist = np.random.normal(mu, sigma, len(individual))
-    xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0, 
+    xadd = np.where(np.random.random(normal_dist.shape) < 1-indpb, 0,
                     normal_dist)
     return individual + xadd
 
@@ -130,12 +132,12 @@ def natural_selection(selectionpop, pop_size, n_select=3):
 def blend_crossover(parent1, parent2, alpha=0.5):
     d = abs(parent1 - parent2)
 
-    child1 = creator.Individual(np.random.uniform(np.minimum(parent1, parent2)-alpha*d, np.maximum(parent1, parent2)+alpha*d))
-    child2 = creator.Individual(np.random.uniform(np.minimum(parent1, parent2)-alpha*d, np.maximum(parent1, parent2)+alpha*d))
+    child1 = creator.Individual(np.random.uniform(parent1-alpha*d, parent1+alpha*d))
+    child2 = creator.Individual(np.random.uniform(parent2-alpha*d, parent2+alpha*d))
     return child1, child2
 
-# The portion of the total population you want as chosen individuals.  
-def uniform_parent(pop): 
+# The portion of the total population you want as chosen individuals.
+def uniform_parent(pop):
     chosen_ind = []
     len_matingpop = len(pop)
 
@@ -145,7 +147,7 @@ def uniform_parent(pop):
 
     return chosen_ind
 
-# Check if the newly assigned weights don't go over or under the set 
+# Check if the newly assigned weights don't go over or under the set
 # boundaries.
 def check_bounds(ind, lower_w, upper_w):
     for i in range(len(ind)):
@@ -155,20 +157,6 @@ def check_bounds(ind, lower_w, upper_w):
             ind[i] = lower_w
     return ind
 
-# Replace worst half of pop by mutating every allele in genome.
-def doomsday(pop, pop_fit, sigma):
-    worst = len(pop)//2
-    order = np.argsort(pop_fit)
-    orderasc = order[0:worst]
-
-    for idx in orderasc:
-        tlbx.mutate(pop[idx], sigma, indpb=1)
-        new_fit = tlbx.evaluate(pop[idx])
-        pop[idx].fitness.values = new_fit
-
-    pop_fit = [ind.fitness.values[0] for ind in pop]
-    return pop
-
 register_deap_functions()
 
 ###############################################################################
@@ -177,8 +165,8 @@ register_deap_functions()
 
 for n_sim in range(10):
 
-    if not os.path.exists(experiment_name+'/enemy {}/sim {}'.format(enemy, n_sim+1)):
-        os.makedirs(experiment_name+'/enemy {}/sim {}'.format(enemy, n_sim+1))
+    if not os.path.exists(experiment_name+'/sim {}'.format(n_sim+1)):
+        os.makedirs(experiment_name+'/sim {}'.format(n_sim+1))
     print("-------------Simulation {}-------------------".format(n_sim+1))
     # initializes population at random
     pop = tlbx.population()
@@ -200,7 +188,7 @@ for n_sim in range(10):
     std_pops.append(std)
     best_per_gen.append(pop_fit[best])
 
-    file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'a')
+    file_aux  = open(experiment_name+'/sim {}/results.txt'.format(n_sim+1), 'a')
     print( '\n GENERATION '+str(0)+ ' Ave fit: '+str(round(mean,6))+ ' Std:  '+str(round(std,6))+ ' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
 
     file_aux.write('GEN ' + 'Mean fit ' + 'Std ' + 'Best ' + 'Ave life' + '\n')
@@ -256,32 +244,25 @@ for n_sim in range(10):
 ############################# Results #########################################
 ###############################################################################
 
-        file_aux  = open(experiment_name+'/enemy {}/sim {}/results.txt'.format(enemy, n_sim+1), 'a')
+        file_aux  = open(experiment_name+'/sim {}/results.txt'.format(n_sim+1), 'a')
         print( '\n GENERATION '+str(n_gen + 1)+' Ave fit: '+str(round(mean,6))+' Std:  '+str(round(std,6))+' Best '+str(round(pop_fit[best],6)) + ' Ave life: ' + str(round(mean_life,6)))
         file_aux.write(str(n_gen+1)+' '+str(round(mean,6))+' '+str(round(std,6))+' '+str(round(pop_fit[best],6)) +' ' + str(round(mean_life, 6)) +'\n')
         file_aux.close()
 
         if pop_fit[best] > best_overall:
-            np.savetxt(experiment_name + '/enemy {}/sim {}/best_solution.txt'.format(enemy, n_sim+1), pop[best])
-            noimprove = 0
-        else:
-            noimprove += 1
+            best_overall = pop_fit[best]
+            np.savetxt(experiment_name + '/sim {}/best_solution.txt'.format(n_sim+1), pop[best])
 
-        if noimprove > n_gens//4:
-            print("Doomsday")
-            pop = doomsday(pop, pop_fit, sigma)
-            noimprove = 0
 
     print("average of generations: ", average_pops)
 
-    np.savetxt(experiment_name + "/enemy {}/sim {}/mean_gen.txt".format(enemy, n_sim+1), average_pops)
-    np.savetxt(experiment_name + "/enemy {}/sim {}/std_gen.txt".format(enemy, n_sim+1), std_pops)
-    np.savetxt(experiment_name + "/enemy {}/sim {}/best_per_gen.txt".format(enemy, n_sim+1), best_per_gen)
-    np.savetxt(experiment_name + "/enemy {}/sim {}/mean_life.txt".format(enemy, n_sim+1), player_means)
+    np.savetxt(experiment_name + "/sim {}/mean_gen.txt".format(n_sim+1), average_pops)
+    np.savetxt(experiment_name + "/sim {}/std_gen.txt".format(n_sim+1), std_pops)
+    np.savetxt(experiment_name + "/sim {}/best_per_gen.txt".format(n_sim+1), best_per_gen)
+    np.savetxt(experiment_name + "/sim {}/mean_life.txt".format(n_sim+1), player_means)
 
     average_pop = []
     std_pops = []
     best_per_gen = []
     player_means = []
     best_overall = 0
-    noimprove = 0
