@@ -1,0 +1,2 @@
+GEN Mean fit Std Best Ave life
+0 2.544589 11.950539 30.174 0.0
