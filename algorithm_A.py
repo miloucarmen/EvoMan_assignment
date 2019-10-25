@@ -24,8 +24,15 @@ import matplotlib.pyplot as plt
 ################################# Setup #######################################
 ###############################################################################
 
-run_mode = 'train'
+run_mode = 'test'
 experiment_name = 'algorithm_A'
+enemy = []
+if run_mode == 'test':
+    enemy = [1]
+    multiple = 'no'
+else:
+    enemy = [2,6]
+    multiple = 'yes'
 
 if not os.path.exists(experiment_name):
     os.makedirs(experiment_name)
@@ -33,8 +40,8 @@ if not os.path.exists(experiment_name):
 # Initialize environment with an ai player using a random controller, playing
 # against a static enemy
 env = Environment(experiment_name = experiment_name,
-                  enemies = [2,6],
-                  multiplemode="yes",
+                  enemies = enemy,
+                  multiplemode= multiple,
                   playermode = 'ai',
                   player_controller = player_controller(),
                   enemymode = 'static',
@@ -44,9 +51,9 @@ env = Environment(experiment_name = experiment_name,
 # Standard variables
 n_train_simulations = 10
 n_hidden = 10
-n_pop = 50
+n_pop = 100
 n_weights = (env.get_num_sensors()+1)*n_hidden + (n_hidden+1)*5 
-max_gens = 20
+max_gens = 50
 noimprovement = 0
 low_bound = -1
 upper_bound = 1
@@ -54,6 +61,7 @@ average_pops = []
 std_pops = []
 best_per_gen = []
 player_means = []
+
 
 
 sigma = 1
@@ -76,6 +84,7 @@ tlbx.register('individual', tools.initRepeat, creator.Individual, tlbx.atrr_floa
 # Population is n_pop long list of individuals
 tlbx.register('Population', tools.initRepeat, list, tlbx.individual, n = n_pop)
 
+bestboth = tlbx.individual()
 ###############################################################################
 ################################ Functions ####################################
 ###############################################################################
@@ -83,7 +92,10 @@ tlbx.register('Population', tools.initRepeat, list, tlbx.individual, n = n_pop)
 # Evaluation
 def EvaluateFit(individual):
     f,p,e,t = env.play(pcont=individual)
-    individual.lifepoint = p
+    if run_mode == 'test':
+        bestboth.lifepoint = p
+    else: 
+        individual.lifepoint = p
     return f,
 
 # Change sigma over time
@@ -149,6 +161,38 @@ tlbx.register('select', uniform_parent)
 tlbx.register('survival', tools.selTournament, tournsize = 3)
 
 
+if run_mode == 'test':
+    bestA = []
+    bestB = []
+    evaluationA = np.zeros((n_train_simulations, 8, 5))
+    evaluationB = np.zeros((n_train_simulations, 8, 5)) 
+    lifeA = np.zeros((n_train_simulations, 8, 5))
+    lifeB = np.zeros((n_train_simulations, 8, 5)) 
+
+    for i in range(n_train_simulations):
+        bestA = np.loadtxt(experiment_name+'/generalist/sim {}'.format(i+1) + '/best.txt')
+        bestB = np.loadtxt('algorithmB_generalist/sim {}/best_solution.txt'.format(i+1))
+        enemy[0] = 0
+        for o in range(8):
+            enemy[0] = enemy[0] + 1
+            for j in range(5): 
+                
+                print('hier')    
+                
+                evaluationA[i][o][j] = tlbx.evaluate(bestA)[0]
+                lifeA[i][o][j] = bestboth.lifepoint
+                evaluationB[i][o][j] = tlbx.evaluate(bestB)[0]
+                lifeB[i][o][j] = bestboth.lifepoint
+            
+            
+            env.update_parameter('enemies',enemy)
+
+        np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/bestfitness.txt', bestA)
+        np.savetxt('algorithmB_generalist/sim {}'.format(i+1) + '/bestfitness.txt', bestB)
+
+    
+
+    sys.exit(0)
 ###############################################################################
 ############################# Evolution #######################################
 ###############################################################################
@@ -288,7 +332,7 @@ if run_mode == 'train':
             mean_life = np.mean(lifepoint)
 
             player_means.append(mean_life)
-            average_pops.append(bestmean)
+            average_pops.append(mean)
             std_pops.append(std)
             best_per_gen.append(maxgen)
 
