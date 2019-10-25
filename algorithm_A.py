@@ -19,6 +19,9 @@ from deap import tools
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from scipy.stats import ttest_ind
 
 ###############################################################################
 ################################# Setup #######################################
@@ -72,7 +75,7 @@ OffProb = 0.8
 # Create a deap base object, containing the fitness function and the individual
 # type.
 creator.create('FitnessMax', base.Fitness, weights = (1.0,))
-creator.create('Individual', np.ndarray, fitness = creator.FitnessMax, lifepoint = 1)
+creator.create('Individual', np.ndarray, fitness = creator.FitnessMax, lifepoint = 1, enemylife = 1)
 
 tlbx = base.Toolbox()
 
@@ -94,8 +97,10 @@ def EvaluateFit(individual):
     f,p,e,t = env.play(pcont=individual)
     if run_mode == 'test':
         bestboth.lifepoint = p
+        bestboth.enemylife = e
     else: 
         individual.lifepoint = p
+        individual.enemylife = e
     return f,
 
 # Change sigma over time
@@ -162,34 +167,62 @@ tlbx.register('survival', tools.selTournament, tournsize = 3)
 
 
 if run_mode == 'test':
+    gain = pd.DataFrame(columns= (['Gain','Algorithm']))
+    gainA = np.zeros(10)
+    gainB = np.zeros(10)
     bestA = []
     bestB = []
-    evaluationA = np.zeros((n_train_simulations, 8, 5))
-    evaluationB = np.zeros((n_train_simulations, 8, 5)) 
-    lifeA = np.zeros((n_train_simulations, 8, 5))
-    lifeB = np.zeros((n_train_simulations, 8, 5)) 
+    meanA = 0
+    meanB = 0
+    stdA = 0
+    stdB = 0
+
+    evaluationA= np.zeros((n_train_simulations, 8))
+    evaluationB= np.zeros((n_train_simulations, 8))
+    lifeA = np.zeros((n_train_simulations, 8))
+    lifeB = np.zeros((n_train_simulations, 8))
+    enemyA = np.zeros((n_train_simulations, 8))
+    enemyB = np.zeros((n_train_simulations, 8))
 
     for i in range(n_train_simulations):
         bestA = np.loadtxt(experiment_name+'/generalist/sim {}'.format(i+1) + '/best.txt')
         bestB = np.loadtxt('algorithmB_generalist/sim {}/best_solution.txt'.format(i+1))
-        enemy[0] = 0
-        for o in range(8):
-            enemy[0] = enemy[0] + 1
-            for j in range(5): 
-                
-                print('hier')    
-                
-                evaluationA[i][o][j] = tlbx.evaluate(bestA)[0]
-                lifeA[i][o][j] = bestboth.lifepoint
-                evaluationB[i][o][j] = tlbx.evaluate(bestB)[0]
-                lifeB[i][o][j] = bestboth.lifepoint
+        gain = gain.append({'Gain' : 0,'Algorithm':'A'},ignore_index=True)
+        gain = gain.append({'Gain' : 0, 'Algorithm':'B'},ignore_index=True)
+        
+        for j in range(8): 
             
-            
-            env.update_parameter('enemies',enemy)
+            env.update_parameter('enemies',enemy) 
 
-        np.savetxt(experiment_name+ '/generalist/sim {}'.format(i+1) + '/bestfitness.txt', bestA)
-        np.savetxt('algorithmB_generalist/sim {}'.format(i+1) + '/bestfitness.txt', bestB)
+            evaluationA[i][j] = tlbx.evaluate(bestA)[0]
+            lifeA[i][j] = bestboth.lifepoint 
+            enemyA[i][j] = bestboth.enemylife
+            gain['Gain'][2*i] = gain['Gain'][2*i]+ bestboth.lifepoint - bestboth.enemylife
+            gainA[i] = gainA[i] + bestboth.lifepoint - bestboth.enemylife
 
+            evaluationB[i][j] = tlbx.evaluate(bestB)[0]
+            lifeB[i][j] = bestboth.lifepoint
+            enemyB[i][j] = bestboth.enemylife
+            gain['Gain'] [2*i + 1] = gain['Gain'] [2*i] + bestboth.lifepoint - bestboth.enemylife
+            gainB[i] = gainB[i] + bestboth.lifepoint - bestboth.enemylife
+
+            enemy[0] = enemy[0] + 1 
+
+        enemy[0] = 1
+
+    data = [gainA, gainB]
+
+    plt.boxplot(data, labels=['A', 'B'])
+    plt.title("Gain boxplot for both algorithms")
+
+    plt.show()
+    
+    meanA = np.mean(gainA)
+    meanB = np.mean(gainB)
+    stdA = np.std(gainA)
+    stdB = np.std(gainB)
+    print(meanA, meanB, stdA, stdB)
+    
     
 
     sys.exit(0)
